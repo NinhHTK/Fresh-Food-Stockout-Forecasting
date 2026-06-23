@@ -2,3 +2,6 @@ datasets
 pandas
 streamlit
 plotly
+matplotlib
+seaborn 
+ast
