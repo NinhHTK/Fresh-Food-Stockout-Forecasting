@@ -478,42 +478,78 @@ if df_data is not None:
             avg_temperature = st.number_input("Nhiệt độ trung bình (°C)", value=25.0, step=0.01, format="%.2f")
 
         # Nút bấm dự đoán
-        if st.button("🚀 Bấm Dự Đoán"):
-            try:
-                # Gom đủ 15 cột chính xác tuyệt đối phía sau (Backend)
-                input_data = pd.DataFrame({
-                    'store_id': [selected_store_id],
-                    'management_group_id': [auto_mg_id],
-                    'first_category_id': [auto_cat1],
-                    'second_category_id': [auto_cat2],
-                    'third_category_id': [auto_cat3],
-                    'product_id': [selected_product_id],
-                    'discount': [discount],
-                    'holiday_flag': [holiday_flag],
-                    'activity_flag': [activity_flag],
-                    'precpt': [def_precpt],
-                    'avg_temperature': [avg_temperature],
-                    'avg_humidity': [70.0], # Gán ngầm giá trị mặc định để mô hình không bị thiếu cột
-                    'avg_wind_level': [def_wind],
-                    'oos_rate_lag1_day': [oos_rate_lag1_day],
-                    'is_weekend': [is_weekend]
-                })
-                
-                prediction = model.predict(input_data)
-                
-                st.success("✅ Mô hình đã dự đoán xong! Trạng thái hết hàng từ 6:00 đến 21:59:")
-                khung_gio = [f"{h}:00 - {h}:59" for h in range(6, 22)]
-                
-                pred_array = prediction[0] if len(prediction.shape) > 1 else prediction
-                ket_qua = ["🔴 Cảnh báo Hết hàng" if x == 1 else "🟢 Còn hàng" for x in pred_array]
-                
-                df_ketqua = pd.DataFrame({"Khung giờ": khung_gio, "Dự báo từ AI": ket_qua})
-                st.dataframe(df_ketqua, hide_index=True, use_container_width=True)
-                
-            except Exception as e:
-                st.error(f"Có lỗi xảy ra khi dự đoán: {e}")
+# -----------------------------------------------------------------------------
+# 7. PHẦN AI DỰ ĐOÁN HẾT HÀNG (XGBoost)
+# -----------------------------------------------------------------------------
+st.divider()
+st.header("🤖 AI Dự đoán hết hàng (XGBoost)")
 
-    except Exception as e:
-        st.error(f"Không thể tải mô hình AI. Lỗi: {e}")
-else:
-    st.error("Chưa thấy file 'freshretailnet_city03_dataset.csv'. Hãy đảm bảo file dữ liệu nằm cùng thư mục với file app/dashapp.py trên GitHub!")
+@st.cache_resource
+def load_ai_model():
+    model_path = 'xgb_model.pkl'
+    if not os.path.exists(model_path):
+        with st.spinner("Đang tải mô hình từ Google Drive..."):
+            file_id = '1_eFNhjIV0OYVuZ5yncRjC7yDAA0xNhNk'
+            url = f'https://drive.google.com/uc?id={file_id}'
+            gdown.download(url, model_path, quiet=False)
+    return joblib.load(model_path)
+
+# Load model
+try:
+    model = load_ai_model()
+    df_data = load_raw_dataset() # Giả định bạn đã có hàm này ở trên
+
+    if df_data is not None:
+        # Chọn Store/Product
+        all_stores = sorted(df_data['store_id'].unique())
+        selected_store_id = st.selectbox("1. Chọn Store ID", options=all_stores)
+        
+        df_filtered_store = df_data[df_data['store_id'] == selected_store_id]
+        products_in_store = sorted(df_filtered_store['product_id'].unique())
+        selected_product_id = st.selectbox("2. Chọn Product ID", options=products_in_store)
+        
+        product_info = df_filtered_store[df_filtered_store['product_id'] == selected_product_id].iloc[0]
+        
+        # Nhập thông số
+        col1, col2 = st.columns(2)
+        with col1:
+            discount = st.number_input("Discount (%)", 0.0, 100.0, 0.0, 0.1)
+            holiday = st.selectbox("Holiday Flag", [0, 1])
+            activity = st.selectbox("Activity Flag", [0, 1])
+        with col2:
+            is_weekend = st.selectbox("Is Weekend", [0, 1])
+            oos_lag = st.number_input("OOS Rate Lag (0-1)", 0.0, 1.0, 0.0, 0.0001)
+            temp = st.number_input("Nhiệt độ trung bình", 0.0, 40.0, 25.0, 0.1)
+
+        if st.button("🚀 Bấm Dự Đoán"):
+            with st.spinner("AI đang phân tích..."):
+                # CẤU TRÚC 15 CỘT - Đảm bảo thứ tự và tên cột khớp với lúc train
+                features = pd.DataFrame([{
+                    'store_id': int(selected_store_id),
+                    'management_group_id': int(product_info['management_group_id']),
+                    'first_category_id': int(product_info['first_category_id']),
+                    'second_category_id': int(product_info['second_category_id']),
+                    'third_category_id': int(product_info['third_category_id']),
+                    'product_id': int(selected_product_id),
+                    'discount': float(discount),
+                    'holiday_flag': int(holiday),
+                    'activity_flag': int(activity),
+                    'precpt': float(df_data['precpt'].mean()),
+                    'avg_temperature': float(temp),
+                    'avg_humidity': 70.0,
+                    'avg_wind_level': float(df_data['avg_wind_level'].mean()),
+                    'oos_rate_lag1_day': float(oos_lag),
+                    'is_weekend': int(is_weekend)
+                }])
+                
+                # Dự đoán
+                prediction = model.predict(features)
+                
+                # Hiển thị
+                st.success("✅ Dự đoán hoàn tất!")
+                khung_gio = [f"{h}:00 - {h}:59" for h in range(6, 22)]
+                ket_qua = ["🔴 Hết hàng" if x == 1 else "🟢 Còn hàng" for x in prediction[0]]
+                st.table(pd.DataFrame({"Khung giờ": khung_gio, "Dự báo": ket_qua}))
+except Exception as e:
+    st.error(f"Lỗi: {e}")
+    st.write("Kiểm tra lại cấu trúc file model và input data.")
