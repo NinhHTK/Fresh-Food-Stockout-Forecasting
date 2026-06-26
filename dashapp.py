@@ -1,13 +1,13 @@
 import streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
+import os
+import joblib
+import gdown
 import matplotlib.pyplot as plt
 import seaborn as sns
 import ast
-import os
-import joblib
-from datetime import datetime
 
 # -----------------------------------------------------------------------------
 # 1. PAGE CONFIGURATION & LOAD DATA
@@ -477,10 +477,6 @@ if df_data is not None:
             # Điều chỉnh bước nhảy nhiệt độ = 0.01
             avg_temperature = st.number_input("Nhiệt độ trung bình (°C)", value=25.0, step=0.01, format="%.2f")
 
-        # Nút bấm dự đoán
-# -----------------------------------------------------------------------------
-# 7. PHẦN AI DỰ ĐOÁN HẾT HÀNG (XGBoost)
-# -----------------------------------------------------------------------------
 st.divider()
 st.header("🤖 AI Dự đoán hết hàng (XGBoost)")
 
@@ -492,25 +488,32 @@ def load_ai_model():
             file_id = '1_eFNhjIV0OYVuZ5yncRjC7yDAA0xNhNk'
             url = f'https://drive.google.com/uc?id={file_id}'
             gdown.download(url, model_path, quiet=False)
+            st.success("Tải mô hình thành công!")
     return joblib.load(model_path)
 
-# Load model
+# Load model & Data
 try:
     model = load_ai_model()
-    df_data = load_raw_dataset() # Giả định bạn đã có hàm này ở trên
+    # Sử dụng df_raw đã được load từ phần đầu code của bạn
+    if 'df_raw' in locals():
+        df_data = df_raw 
+    else:
+        df_data = load_raw_dataset()
 
     if df_data is not None:
-        # Chọn Store/Product
-        all_stores = sorted(df_data['store_id'].unique())
+        st.markdown("Chọn Store ID và Product ID để AI dự đoán.")
+        
+        # 1. Chọn Store & Product
+        all_stores = sorted(df_data['store_id'].dropna().unique().tolist())
         selected_store_id = st.selectbox("1. Chọn Store ID", options=all_stores)
         
         df_filtered_store = df_data[df_data['store_id'] == selected_store_id]
-        products_in_store = sorted(df_filtered_store['product_id'].unique())
-        selected_product_id = st.selectbox("2. Chọn Product ID", options=products_in_store)
+        products_in_store = sorted(df_filtered_store['product_id'].dropna().unique().tolist())
+        selected_product_id = st.selectbox("2. Chọn Product ID", options=products_in_store if products_in_store else [0])
         
         product_info = df_filtered_store[df_filtered_store['product_id'] == selected_product_id].iloc[0]
         
-        # Nhập thông số
+        # 2. Giao diện nhập thông số
         col1, col2 = st.columns(2)
         with col1:
             discount = st.number_input("Discount (%)", 0.0, 100.0, 0.0, 0.1)
@@ -518,12 +521,13 @@ try:
             activity = st.selectbox("Activity Flag", [0, 1])
         with col2:
             is_weekend = st.selectbox("Is Weekend", [0, 1])
-            oos_lag = st.number_input("OOS Rate Lag (0-1)", 0.0, 1.0, 0.0, 0.0001)
-            temp = st.number_input("Nhiệt độ trung bình", 0.0, 40.0, 25.0, 0.1)
+            oos_lag = st.number_input("Tỷ lệ OOS hôm qua", 0.0, 1.0, 0.0, 0.0001)
+            temp = st.number_input("Nhiệt độ trung bình (°C)", 0.0, 40.0, 25.0, 0.1)
 
+        # 3. Dự đoán
         if st.button("🚀 Bấm Dự Đoán"):
             with st.spinner("AI đang phân tích..."):
-                # CẤU TRÚC 15 CỘT - Đảm bảo thứ tự và tên cột khớp với lúc train
+                # Gom đủ 15 cột - THỨ TỰ CỰC KỲ QUAN TRỌNG
                 features = pd.DataFrame([{
                     'store_id': int(selected_store_id),
                     'management_group_id': int(product_info['management_group_id']),
@@ -542,14 +546,16 @@ try:
                     'is_weekend': int(is_weekend)
                 }])
                 
-                # Dự đoán
                 prediction = model.predict(features)
                 
-                # Hiển thị
                 st.success("✅ Dự đoán hoàn tất!")
                 khung_gio = [f"{h}:00 - {h}:59" for h in range(6, 22)]
-                ket_qua = ["🔴 Hết hàng" if x == 1 else "🟢 Còn hàng" for x in prediction[0]]
+                pred_array = prediction[0]
+                ket_qua = ["🔴 Hết hàng" if x == 1 else "🟢 Còn hàng" for x in pred_array[:16]]
+                
                 st.table(pd.DataFrame({"Khung giờ": khung_gio, "Dự báo": ket_qua}))
+                
+    else:
+        st.error("Không tìm thấy dữ liệu để dự đoán.")
 except Exception as e:
-    st.error(f"Lỗi: {e}")
-    st.write("Kiểm tra lại cấu trúc file model và input data.")
+    st.error(f"Lỗi hệ thống: {e}")
