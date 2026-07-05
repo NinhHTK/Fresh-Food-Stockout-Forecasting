@@ -1,8 +1,8 @@
-Fresh Food Stockout Forecasting
-
+**Fresh Food Stockout Forecasting
+**
 This project focuses on predicting stockouts for fresh food items, helping to optimize inventory management and reduce waste.
 
-Key Features
+- Key Features
 
 Data Analysis: Data preprocessing and Exploratory Data Analysis (EDA) of retail datasets.
 
@@ -10,8 +10,8 @@ Forecasting Models: Implementation of various Machine Learning algorithms, inclu
 
 Interactive Dashboard: A Streamlit-based application for real-time visualization and stockout predictions.
 
-Access Links
+- Access Links
 
-Management Dashboard
+Management Dashboard :
 
-AI Prediction Tool
+AI Prediction Tool : 
