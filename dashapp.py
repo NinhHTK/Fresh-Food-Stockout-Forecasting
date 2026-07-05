@@ -13,6 +13,27 @@ import ast
 # -----------------------------------------------------------------------------
 st.set_page_config(page_title="FreshRetailNet - City 03 Dashboard", layout="wide")
 
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #0b1f37;
+        background-image: linear-gradient(180deg, rgba(11,31,55,0.98) 0%, rgba(1,12,30,0.98) 100%);
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }
+    section[data-testid="stSidebar"] {
+        background-image: linear-gradient(180deg, rgba(3,14,35,0.96) 0%, rgba(0, 93, 172,0.45) 100%);
+        background-size: cover;
+        background-position: center;
+        border-right: 1px solid rgba(255,255,255,0.12);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.title("📊 FreshRetail Analytics Dashboard - City ID 03")
 st.markdown("Use the filters on the left sidebar to analyze data by **Store ID** and **Time Period**.")
 
@@ -36,18 +57,32 @@ if df_raw is None:
 # -----------------------------------------------------------------------------
 st.sidebar.header("🔍 Data Filters")
 
+# Provide defaults and allow reset
 all_stores = sorted(df_raw['store_id'].unique())
-selected_store = st.sidebar.multiselect("Select Store ID(s):", options=all_stores, default=all_stores[:5])
-
 min_date = df_raw['dt'].min().date()
 max_date = df_raw['dt'].max().date()
 
-selected_dates = st.sidebar.date_input(
-    "Select Time Period (Date or Date range):",
-    value=(min_date, max_date),
-    min_value=min_date,
-    max_value=max_date
-)
+if 'filters_reset' not in st.session_state:
+    st.session_state['filters_reset'] = False
+
+with st.sidebar.expander("Filter Options", expanded=True):
+    selected_store = st.multiselect("Select Store ID(s):", options=all_stores, default=all_stores[:5], key='selected_store')
+    if not selected_store:
+        st.warning("Please select at least one Store ID. Defaulting to the first available store.")
+        selected_store = [all_stores[0]]
+
+    selected_dates = st.date_input(
+        "Select Time Period (Date or Date range):",
+        value=(min_date, max_date),
+        min_value=min_date,
+        max_value=max_date,
+        key='selected_dates'
+    )
+
+    # quick summary
+    st.markdown(f"**Stores selected:** {len(selected_store)}  ")
+    sd = selected_dates
+    st.markdown(f"**Period:** {sd[0]} to {sd[1]}")
 
 if isinstance(selected_dates, (tuple, list)):
     if len(selected_dates) == 2:
@@ -63,7 +98,8 @@ df_filtered = df_raw[
     (df_raw['dt'].dt.date <= end_date)
 ].copy()
 
-st.sidebar.markdown(f"**Number of records after filtering:** {df_filtered.shape[0]:,}")
+# Sidebar: number of records removed per user request
+# st.sidebar.markdown(f"**Number of records after filtering:** {df_filtered.shape[0]:,}")
 
 # -----------------------------------------------------------------------------
 # 3. METRICS & KPIS DISPLAY
@@ -74,25 +110,143 @@ st.subheader("📌 General Key Performance Indicators (KPIs)")
 total_sales = df_filtered['sale_amount'].sum()
 unique_products = df_filtered['product_id'].nunique()
 unique_stores = df_filtered['store_id'].nunique()
+avg_sales = df_filtered['sale_amount'].mean()
+total_records = df_filtered.shape[0]
 
+# Calculate out-of-stock related KPIs
+def safe_eval_kpi(x):
+    if isinstance(x, list):
+        return x
+    if isinstance(x, np.ndarray):
+        return x.tolist()
+    if isinstance(x, str):
+        try:
+            return ast.literal_eval(x)
+        except:
+            return [0]*24
+    return [0]*24
+
+df_filtered['hours_stock_status'] = df_filtered['hours_stock_status'].apply(safe_eval_kpi)
+df_filtered['oos_rate'] = df_filtered['hours_stock_status'].apply(lambda x: sum(1 for s in x if s == 0) / len(x) if len(x) > 0 else 0)
+avg_oos_rate = df_filtered['oos_rate'].mean() * 100
+total_oos_events = (df_filtered['oos_rate'] > 0).sum()
+
+# Holiday and Activity impact
+holiday_records = (df_filtered['holiday_flag'] == 1).sum()
+activity_records = (df_filtered['activity_flag'] == 1).sum()
+avg_temp = df_filtered['avg_temperature'].mean()
+
+# Streamlined, currency symbols removed per user request. Show essential KPIs only.
 col1, col2, col3 = st.columns(3)
-col1.metric("Total Revenue (Sale Amount)", f"{total_sales:,.2f}")
-col2.metric("Unique Products Count", f"{unique_products:,}")
-col3.metric("Active Stores Count", f"{unique_stores:,}")
+# Add simple symbols/emojis in KPI labels only; remove icons adjacent to numeric values
+st.markdown(
+    """
+    <style>
+    .kpi-card {
+        max-width: 300px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 1rem;
+        border-radius: 18px;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.10);
+        border: 1px solid rgba(0,0,0,0.08);
+    }
+    .kpi-card-1 {
+        background: rgba(76, 175, 80, 0.15);
+    }
+    .kpi-card-2 {
+        background: rgba(33, 150, 243, 0.15);
+    }
+    .kpi-card-3 {
+        background: rgba(255, 152, 0, 0.15);
+    }
+    .kpi-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 0.4rem;
+    }
+    .kpi-value {
+        font-size: 2.4rem;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+col1, col2, col3 = st.columns(3)
+col1.markdown(
+    f"""
+    <div class='kpi-card kpi-card-1'>
+        <div class='kpi-title'>💰 Total Revenue</div>
+        <div class='kpi-value'>{total_sales:,.0f}</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+col2.markdown(
+    f"""
+    <div class='kpi-card kpi-card-2'>
+        <div class='kpi-title'>🧾 Average Sale Value</div>
+        <div class='kpi-value'>{avg_sales:,.2f}</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+col3.markdown(
+    f"""
+    <div class='kpi-card kpi-card-3'>
+        <div class='kpi-title'>📑 Total Records</div>
+        <div class='kpi-value'>{total_records:,}</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
+
+col4, col5, col6 = st.columns(3)
+col4.markdown(
+    f"""
+    <div class='kpi-card' style="background: linear-gradient(135deg, #a8e6cf 0%, #dcedc1 100%);">
+        <div class='kpi-title'>🧩 Unique Products</div>
+        <div class='kpi-value'>{unique_products:,}</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+col5.markdown(
+    f"""
+    <div class='kpi-card' style="background: linear-gradient(135deg, #6fa8ff 0%, #c0dcff 100%);">
+        <div class='kpi-title'>🏬 Active Stores</div>
+        <div class='kpi-value'>{unique_stores:,}</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+col6.markdown(
+    f"""
+    <div class='kpi-card' style="background: linear-gradient(135deg, #ff7a7a 0%, #ff3b3b 100%);">
+        <div class='kpi-title'>⚠️ Avg Out-of-Stock Rate</div>
+        <div class='kpi-value'>{avg_oos_rate:.1f}%</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # -----------------------------------------------------------------------------
 # 4. UNIVARIATE ANALYSIS (MATPLOTLIB/SEABORN)
 # -----------------------------------------------------------------------------
 st.divider()
-st.subheader("📈 1. Univariate Analysis")
+st.markdown("### Univariate Analysis — Exploring Key Features")
 
 df_eda = df_filtered.copy()
 sns.set_theme(style="whitegrid")
 fig_uni, axes = plt.subplots(2, 2, figsize=(18, 13))
-fig_uni.suptitle('Univariate Analysis Dashboard', fontsize=16, fontweight='bold')
+fig_uni.suptitle('Univariate Insights Dashboard', fontsize=16, fontweight='bold')
 
 sns.histplot(df_eda['sale_amount'], kde=True, ax=axes[0, 0], bins=30, color='skyblue')
-axes[0, 0].set_title('1. Distribution of Sale Amount', fontsize=13, fontweight='bold')
+axes[0, 0].set_title('Distribution of Sale Amount', fontsize=13, fontweight='bold')
 axes[0, 0].set_xlabel('Sale Amount')
 axes[0, 0].set_ylabel('Frequency')
 median_sale = df_eda['sale_amount'].median()
@@ -111,20 +265,24 @@ ordered_labels = ['No Holiday & No Activity', 'Activity Only', 'Holiday Only', '
 pie_data = pie_data.reindex(ordered_labels)
 colors = sns.color_palette('pastel')[0:len(pie_data)]
 
-axes[0, 1].pie(
-    pie_data.values,
-    labels=[f'{label}\n({val:,} records)' for label, val in pie_data.items()],
-    autopct='%1.1f%%',
-    startangle=90,
-    colors=colors,
-    textprops={'fontsize': 10, 'fontweight': 'bold'},
-    wedgeprops={'edgecolor': 'white', 'linewidth': 1.5}
-)
-axes[0, 1].set_title('2. Proportion of Data by Holiday and Activity Status', fontsize=13, fontweight='bold')
+# Check if pie_data has any non-zero values to avoid "All wedge sizes are zero" error
+if pie_data.sum() > 0:
+    axes[0, 1].pie(
+        pie_data.values,
+        labels=[f'{label}\n({val:,} records)' for label, val in pie_data.items()],
+        autopct='%1.1f%%',
+        startangle=90,
+        colors=colors,
+        textprops={'fontsize': 10, 'fontweight': 'bold'},
+        wedgeprops={'edgecolor': 'white', 'linewidth': 1.5}
+    )
+else:
+    axes[0, 1].text(0.5, 0.5, 'No data available', ha='center', va='center', fontsize=12, fontweight='bold')
+axes[0, 1].set_title('Proportion of Data by Holiday and Activity Status', fontsize=13, fontweight='bold')
 axes[0, 1].axis('equal')
 
 sns.histplot(df_eda['avg_temperature'], kde=True, ax=axes[1, 0], bins=30, color='lightcoral')
-axes[1, 0].set_title('3. Distribution of Average Temperature', fontsize=13, fontweight='bold')
+axes[1, 0].set_title('Distribution of Average Temperature', fontsize=13, fontweight='bold')
 axes[1, 0].set_xlabel('Average Temperature (°C)')
 axes[1, 0].set_ylabel('Frequency')
 
@@ -139,7 +297,7 @@ sns.countplot(x='management_group_id', data=df_eda, ax=axes[1, 1],
               order=mg_id_order_ascending,
               palette=colors_for_ascending_order,
               hue='management_group_id', legend=False)
-axes[1, 1].set_title('4. Count of Management Group ID', fontsize=13, fontweight='bold')
+axes[1, 1].set_title('Count of Management Group ID', fontsize=13, fontweight='bold')
 axes[1, 1].set_xlabel('Management Group ID')
 axes[1, 1].set_ylabel('Count')
 
@@ -150,7 +308,7 @@ st.pyplot(fig_uni)
 # 5. BIVARIATE ANALYSIS - OOS DIAGNOSTIC INSIGHTS (SEABORN/MATPLOTLIB)
 # -----------------------------------------------------------------------------
 st.divider()
-st.subheader("📈 2. Bivariate Analysis: Out-of-Stock (OOS) Diagnostic Insights")
+st.markdown("### Bivariate Analysis — Inventory Availability & Stockout Pattern Analysis")
 
 df_bivar_oos = df_filtered.copy()
 
@@ -185,7 +343,7 @@ fig_bivar_oos_plots.suptitle('Bivariate Analysis: Factors Influencing Out-of-Sto
 
 hourly_oos_rate = hours_df[[f'{i}h' for i in range(6, 22)]].mean()
 sns.lineplot(x=hourly_oos_rate.index, y=hourly_oos_rate.values, marker='o', color='red', linewidth=2.5, ax=axes_oos[0, 0])
-axes_oos[0, 0].set_title('1. Average Out-of-Stock Rate by Hour (6h - 21h59)', fontsize=14, fontweight='bold')
+axes_oos[0, 0].set_title('Average Out-of-Stock Rate by Hour (6h - 21h59)', fontsize=14, fontweight='bold')
 axes_oos[0, 0].set_xlabel('Hour of the Day (6h - 21h59)', fontsize=11)
 axes_oos[0, 0].set_ylabel('Out-of-Stock Rate (0 - 1)')
 axes_oos[0, 0].tick_params(axis='x', rotation=45)
@@ -219,7 +377,7 @@ for i, val in enumerate(avg_oos_by_event.values):
     axes_oos[0, 1].text(i, val + (max(avg_oos_by_event.values)*0.01), f'{val:.2f}h',
                         ha='center', va='bottom', fontsize=10, fontweight='bold')
 
-axes_oos[0, 1].set_title('2. Average OOS Hours by Event Category (6h - 21h59)', fontsize=13, fontweight='bold', pad=15)
+axes_oos[0, 1].set_title('Average OOS Hours by Event Category (6h - 21h59)', fontsize=13, fontweight='bold', pad=15)
 axes_oos[0, 1].set_xlabel('Event Category', fontsize=11)
 axes_oos[0, 1].set_ylabel('Average Out-of-Stock Hours (6h - 21h59)', fontsize=11)
 axes_oos[0, 1].tick_params(axis='x', rotation=15)
@@ -246,7 +404,7 @@ sns.barplot(
 for i, v in enumerate(top_5_oos_products['avg_oos_hours']):
     axes_oos[1, 0].text(v + 0.1, i, f'{v:.2f}', va='center', fontsize=10, fontweight='bold')
 
-axes_oos[1, 0].set_title('3. Top 5 Products by Average OOS Hours (6h - 21h59)', fontsize=13, fontweight='bold', pad=15)
+axes_oos[1, 0].set_title('Top 5 Products by Average OOS Hours (6h - 21h59)', fontsize=13, fontweight='bold', pad=15)
 axes_oos[1, 0].set_xlabel('Average Out-of-Stock Hours (6h - 21h59)', fontsize=11)
 axes_oos[1, 0].set_ylabel('Product ID', fontsize=11)
 
@@ -272,7 +430,7 @@ for i, val in enumerate(avg_oos_by_temp['oos_hours_per_record']):
         axes_oos[1, 1].text(i, val + (avg_oos_by_temp['oos_hours_per_record'].max()*0.01), f'{val:.2f}h',
                             ha='center', va='bottom', fontsize=10, fontweight='bold')
 
-axes_oos[1, 1].set_title('4. Average OOS Hours by Temperature Range (6h - 21h59)', fontsize=13, fontweight='bold')
+axes_oos[1, 1].set_title('Average OOS Hours by Temperature Range (6h - 21h59)', fontsize=13, fontweight='bold')
 axes_oos[1, 1].set_xlabel('Temperature Range', fontsize=11)
 axes_oos[1, 1].set_ylabel('Average Out-of-Stock Hours (6h - 21h59)', fontsize=11)
 
@@ -283,7 +441,7 @@ st.pyplot(fig_bivar_oos_plots)
 # 6. MULTIVARIATE ANALYSIS - SEABORN/MATPLOTLIB
 # -----------------------------------------------------------------------------
 st.divider()
-st.subheader("📈 3. Multivariate Analysis")
+st.markdown("### Multivariate Insights — Category & Environmental Impact on OOS Hours")
 
 df_multi = df_filtered.copy()
 
@@ -307,9 +465,13 @@ df_multi['oos_hours_per_record'] = total_hours_in_window_multi - df_multi['stock
 
 df_multi['day_of_week'] = df_multi['dt'].dt.day_name()
 
-st.markdown("##### 🔍 Multivariate Filters")
 all_categories = sorted([x for x in df_multi['first_category_id'].unique() if pd.notna(x)])
-selected_categories = st.multiselect("Select First Category ID(s) to display:", options=all_categories, default=all_categories[:10])
+selected_categories = st.multiselect("Select First Category ID(s) to display:", options=all_categories, default=all_categories[:5])
+
+# Also respect sidebar store & date filters for multivariate view
+if 'selected_store' in globals() and selected_store:
+    df_multi = df_multi[df_multi['store_id'].isin(selected_store)]
+df_multi = df_multi[(df_multi['dt'].dt.date >= start_date) & (df_multi['dt'].dt.date <= end_date)]
 
 if selected_categories:
     df_multi = df_multi[df_multi['first_category_id'].isin(selected_categories)]
@@ -338,7 +500,7 @@ else:
         linewidths=.5,   
         ax=axes_multi[0]
     )
-    axes_multi[0].set_title('1. Product OOS Hours Across Days of Week', fontsize=14, fontweight='bold')
+    axes_multi[0].set_title('Product OOS Hours Across Days of Week', fontsize=14, fontweight='bold')
     axes_multi[0].set_xlabel('Day of Week', fontsize=11)
     axes_multi[0].set_ylabel('First Category ID', fontsize=11)
     axes_multi[0].tick_params(axis='x', rotation=45)
@@ -361,7 +523,7 @@ else:
         ax=axes_multi[1],
         palette='tab20'
     )
-    axes_multi[1].set_title('2. Product OOS Hours Across Temperature Ranges', fontsize=14, fontweight='bold')
+    axes_multi[1].set_title('Product OOS Hours Across Temperature Ranges', fontsize=14, fontweight='bold')
     axes_multi[1].set_xlabel('Temperature Range', fontsize=11)
     axes_multi[1].set_ylabel('Average Out-of-Stock Hours', fontsize=11)
     axes_multi[1].tick_params(axis='x', rotation=15)
