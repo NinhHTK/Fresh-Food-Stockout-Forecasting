@@ -547,3 +547,52 @@ else:
             dashboard_map[dashboard_name](df_filtered)
 with st.sidebar:
     st.link_button("🔗 Open Forecast App", "https://predicthourstock.streamlit.app/", use_container_width=True)
+#
+# 
+# 
+# 
+st.divider()
+# 2. Main Area: Use Tabs to divide sections
+st.subheader("🤖 Models")
+
+model_options = [
+    "XGBoost Model",
+    "LightGBM Model",
+    "Random Forest Model",
+    "Logistic Regression Model",
+    "MLP Model"
+]
+
+selected_models = st.multiselect(
+    "Choose models (up to 2):",
+    options=model_options,
+    default=model_options[:2],
+    help="Select up to 2 models to view the detailed tabs below."
+)
+
+if not selected_models:
+    st.warning("Please select at least one model.")
+    selected_models = [model_options[0]]
+elif len(selected_models) > 2:
+    st.warning("You can only display up to 2 models at once. Showing the first 2 models.")
+    selected_models = selected_models[:2]
+
+tabs = st.tabs(["Performance Metrics", "Feature Importance", "Confusion Matrix", "SHAP Summary"])
+
+for tab_index, tab in enumerate(tabs):
+    with tab:
+        cols = st.columns(len(selected_models) if len(selected_models) > 1 else 1)
+        for idx, model_name in enumerate(selected_models[:2]):
+            with cols[idx]:
+                if tab_index == 0:
+                    st.markdown(f"### {model_name} — Performance Metrics")
+                    st.write("Display the model performance metrics (accuracy, precision, recall, F1, AUC) when data is available.")
+                elif tab_index == 1:
+                    st.markdown(f"### {model_name} — Feature Importance")
+                    st.write("Table/chart of the model's feature importance.")
+                elif tab_index == 2:
+                    st.markdown(f"### {model_name} — Confusion Matrix")
+                    st.write("Confusion matrix for evaluating correct and incorrect classifications.")
+                elif tab_index == 3:
+                    st.markdown(f"### {model_name} — SHAP Summary")
+                    st.write("Summary SHAP plot showing feature impact on predictions.")
