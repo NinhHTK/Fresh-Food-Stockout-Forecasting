@@ -84,6 +84,10 @@ with st.sidebar.expander("Filter Options", expanded=True):
     sd = selected_dates
     st.markdown(f"**Period:** {sd[0]} to {sd[1]}")
 
+# Insight view selector for dashboard rendering
+# Render all dashboard views by default
+dashboard_options = ["Univariate Analysis", "Bivariate Analysis", "Multivariate Insights"]
+selected_dashboards = dashboard_options
 
 if isinstance(selected_dates, (tuple, list)):
     if len(selected_dates) == 2:
@@ -240,12 +244,13 @@ col6.markdown(
 # -----------------------------------------------------------------------------
 st.divider()
 st.subheader("📊 Choose Insight View")
-dashboard_options = ["None", "Univariate Analysis", "Bivariate Analysis", "Multivariate Insights"]
-selected_dashboard = st.selectbox("", options=dashboard_options, index=1)
 
-selected_dashboards = []
-if selected_dashboard != "None":
-    selected_dashboards.append(selected_dashboard)
+# Định nghĩa các tab
+tab_titles = ["Univariate Analysis", "Bivariate Analysis", "Multivariate Insights"]
+tabs = st.tabs(tab_titles)
+tab_objects = dict(zip(tab_titles, tabs))
+
+# Actual dashboard content will be rendered after the chart helper functions are defined.
 # -----------------------------------------------------------------------------
 # 4. DASHBOARD RENDERING FUNCTIONS
 # -----------------------------------------------------------------------------
@@ -535,8 +540,10 @@ dashboard_map = {
 }
 
 if not selected_dashboards:
-    st.warning("Vui lòng chọn ít nhất một mục.")
+    st.warning("Please select at least one view.")
 else:
-    # Render the single selected dashboard
-    dashboard_map[selected_dashboards[0]](df_filtered)
-
+    for dashboard_name in selected_dashboards:
+        with tab_objects[dashboard_name]:
+            dashboard_map[dashboard_name](df_filtered)
+with st.sidebar:
+    st.link_button("🔗 Open Forecast App", "https://predicthourstock.streamlit.app/", use_container_width=True)
