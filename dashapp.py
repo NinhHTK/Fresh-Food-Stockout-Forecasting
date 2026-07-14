@@ -585,14 +585,135 @@ for tab_index, tab in enumerate(tabs):
         for idx, model_name in enumerate(selected_models[:2]):
             with cols[idx]:
                 if tab_index == 0:
-                    st.markdown(f"### {model_name} — Performance Metrics")
-                    st.write("Display the model performance metrics (accuracy, precision, recall, F1, AUC) when data is available.")
+                    st.markdown(f"### {model_name}")
+                    # Insert known performance metrics for XGBoost and LightGBM models
+                    if model_name == "XGBoost Model":
+                        metrics_data = {
+                            "Metric": ["Total Test Samples", "Accuracy", "Precision", "Recall", "F1-Score"],
+                            "Value": ["18,536", "80.20%", "55.07%", "69.72%", "61.36%"]
+                        }
+                        st.dataframe(metrics_data, use_container_width=True, hide_index=True)
+                    elif model_name == "LightGBM Model":
+                        metrics_data = {
+                            "Metric": ["Total Test Samples", "Accuracy", "Precision", "Recall", "F1-Score"],
+                            "Value": ["18,536", "79.93%", "55.70%", "69.00%", "61.34%"]
+                        }
+                        st.dataframe(metrics_data, use_container_width=True, hide_index=True)
+                    else:
+                        # Add known validation results for additional models
+                        if model_name == "Random Forest Model":
+                            metrics_data = {
+                                "Metric": ["Total Test Samples", "Accuracy", "Precision", "Recall", "F1-Score"],
+                                "Value": ["18,536", "78.80%", "52.57%", "67.52%", "58.87%"]
+                            }
+                            st.dataframe(metrics_data, use_container_width=True, hide_index=True)
+                        elif model_name == "Logistic Regression Model":
+                            metrics_data = {
+                                "Metric": ["Total Test Samples", "Accuracy", "Precision", "Recall", "F1-Score"],
+                                "Value": ["18,536", "75.72%", "46.87%", "59.82%", "52.17%"]
+                            }
+                            st.dataframe(metrics_data, use_container_width=True, hide_index=True)
+                        elif model_name == "MLP Model":
+                            metrics_data = {
+                                "Metric": ["Total Test Samples", "Accuracy", "Precision", "Recall", "F1-Score"],
+                                "Value": ["18,536", "75.58%", "46.62%", "60.39%", "52.41%"]
+                            }
+                            st.dataframe(metrics_data, use_container_width=True, hide_index=True)
+                        else:
+                            st.write("Display the model performance metrics (accuracy, precision, recall, F1, AUC) when data is available.")
                 elif tab_index == 1:
-                    st.markdown(f"### {model_name} — Feature Importance")
-                    st.write("Table/chart of the model's feature importance.")
+                    st.markdown(f"### {model_name}")
+                    if model_name == "Logistic Regression Model":
+                        # Feature importance data for Logistic Regression
+                        feature_importance_data = {
+                            "Feature": ["oos_rate_lag1_day", "discount", "activity_flag", "is_weekend", "avg_wind_level", 
+                                       "holiday_flag", "precpt", "avg_temperature", "management_group_id", "first_category_id",
+                                       "avg_humidity", "second_category_id", "third_category_id", "product_id", "store_id"],
+                            "Importance (%)": [70.0, 10.5, 6.8, 5.2, 2.8, 2.1, 1.5, 0.8, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+                        }
+                        fig, ax = plt.subplots(figsize=(10, 6))
+                        df_importance = pd.DataFrame(feature_importance_data)
+                        df_importance = df_importance.sort_values("Importance (%)", ascending=True)
+                        ax.barh(df_importance["Feature"], df_importance["Importance (%)"], color='#0056B3')
+                        ax.set_xlabel("Feature contribution to model decision (%)", fontsize=10)
+                        ax.set_ylabel("Input features", fontsize=10)
+                        ax.set_title("Feature importance for 16-hour stockout prediction", fontsize=11, fontweight='bold')
+                        plt.tight_layout()
+                        st.pyplot(fig, use_container_width=True)
+                    elif model_name == "MLP Model":
+                        # Feature importance data for MLP (example/permutation importance)
+                        feature_importance_data = {
+                            "Feature": ["oos_rate_lag1_day", "product_id", "third_category_id", "first_category_id",
+                                         "discount", "activity_flag", "is_weekend", "avg_temperature",
+                                         "avg_humidity", "management_group_id", "second_category_id",
+                                         "store_id", "holiday_flag", "precpt", "avg_wind_level"],
+                            "Importance (%)": [53.3, 16.0, 12.5, 5.0, 3.5, 2.2, 1.8, 1.0, 0.6, 0.4, 0.3, 0.2, 0.15, 0.05, 0.05]
+                        }
+                        fig, ax = plt.subplots(figsize=(10, 6))
+                        df_importance = pd.DataFrame(feature_importance_data)
+                        df_importance = df_importance.sort_values("Importance (%)", ascending=True)
+                        ax.barh(df_importance["Feature"], df_importance["Importance (%)"], color='#1f77b4')
+                        ax.set_xlabel("Feature contribution to model decision (%)", fontsize=10)
+                        ax.set_ylabel("Input features", fontsize=10)
+                        ax.set_title("Relative feature contribution (MLP)", fontsize=11, fontweight='bold')
+                        plt.tight_layout()
+                        st.pyplot(fig, use_container_width=True)
+                    elif model_name == "XGBoost Model":
+                        # Feature importance data for XGBoost
+                        feature_importance_data = {
+                            "Feature": ["oos_rate_lag1_day", "discount", "product_id", "avg_temperature", "third_category_id",
+                                         "second_category_id", "precpt", "avg_humidity", "holiday_flag", "management_group_id",
+                                         "avg_wind_level", "first_category_id", "is_weekend", "store_id", "activity_flag"],
+                            "Importance (%)": [25.0, 18.0, 14.5, 11.0, 7.2, 6.8, 4.5, 4.0, 3.0, 2.0, 1.5, 1.0, 0.3, 0.2, 0.1]
+                        }
+                        fig, ax = plt.subplots(figsize=(10, 6))
+                        df_importance = pd.DataFrame(feature_importance_data)
+                        df_importance = df_importance.sort_values("Importance (%)", ascending=True)
+                        ax.barh(df_importance["Feature"], df_importance["Importance (%)"], color='#E87722')
+                        ax.set_xlabel("Feature contribution to model decision (%)", fontsize=10)
+                        ax.set_ylabel("Input features", fontsize=10)
+                        ax.set_title("Feature importance for XGBoost", fontsize=11, fontweight='bold')
+                        plt.tight_layout()
+                        st.pyplot(fig, use_container_width=True)
+                    elif model_name == "Random Forest Model":
+                        # Feature importance data for Random Forest
+                        feature_importance_data = {
+                            "Feature": ["oos_rate_lag1_day", "product_id", "discount", "avg_temperature", "third_category_id",
+                                        "second_category_id", "avg_humidity", "first_category_id", "precpt", "management_group_id",
+                                        "holiday_flag", "avg_wind_level", "is_weekend", "store_id", "activity_flag"],
+                            "Importance (%)": [28.5, 16.8, 15.2, 11.5, 8.3, 7.5, 5.2, 4.0, 1.8, 0.8, 0.2, 0.1, 0.05, 0.05, 0.03]
+                        }
+                        fig, ax = plt.subplots(figsize=(10, 6))
+                        df_importance = pd.DataFrame(feature_importance_data)
+                        df_importance = df_importance.sort_values("Importance (%)", ascending=True)
+                        ax.barh(df_importance["Feature"], df_importance["Importance (%)"], color='#228B22')
+                        ax.set_xlabel("Feature contribution to model decision (%)", fontsize=10)
+                        ax.set_ylabel("Input features", fontsize=10)
+                        ax.set_title("Feature importance for Random Forest", fontsize=11, fontweight='bold')
+                        plt.tight_layout()
+                        st.pyplot(fig, use_container_width=True)
+                    elif model_name == "LightGBM Model":
+                        # Feature importance data for LightGBM
+                        feature_importance_data = {
+                            "Feature": ["discount", "product_id", "avg_temperature", "third_category_id", "second_category_id",
+                                        "precpt", "avg_humidity", "oos_rate_lag1_day", "first_category_id", "management_group_id",
+                                        "holiday_flag", "avg_wind_level", "is_weekend", "store_id", "activity_flag"],
+                            "Importance (%)": [20.5, 15.2, 12.8, 10.2, 9.8, 7.5, 7.2, 6.5, 5.0, 2.8, 2.1, 0.8, 0.3, 0.2, 0.1]
+                        }
+                        fig, ax = plt.subplots(figsize=(10, 6))
+                        df_importance = pd.DataFrame(feature_importance_data)
+                        df_importance = df_importance.sort_values("Importance (%)", ascending=True)
+                        ax.barh(df_importance["Feature"], df_importance["Importance (%)"], color='#2E5090')
+                        ax.set_xlabel("Feature contribution to model decision (%)", fontsize=10)
+                        ax.set_ylabel("Input features", fontsize=10)
+                        ax.set_title("Feature importance for LightGBM", fontsize=11, fontweight='bold')
+                        plt.tight_layout()
+                        st.pyplot(fig, use_container_width=True)
+                    else:
+                        st.write("Table/chart of the model's feature importance.")
                 elif tab_index == 2:
-                    st.markdown(f"### {model_name} — Confusion Matrix")
+                    st.markdown(f"### {model_name}")
                     st.write("Confusion matrix for evaluating correct and incorrect classifications.")
                 elif tab_index == 3:
-                    st.markdown(f"### {model_name} — SHAP Summary")
+                    st.markdown(f"### {model_name}")
                     st.write("Summary SHAP plot showing feature impact on predictions.")
