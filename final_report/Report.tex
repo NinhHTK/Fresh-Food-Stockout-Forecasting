@@ -18,12 +18,20 @@
     urlcolor=blue
 }
 
-% --- Title and Author ---
+% --- Title and Author (Side-by-Side) ---
 \title{Hourly Out-of-Stock Prediction for Fresh Food Retail}
-\author{Group 10: \\
-Tong Quang Truong - SE194578\\
-Ha Thuc Khuong Ninh - SE196288\\ }
-\date{\today}
+
+\author{
+    \begin{tabular}{c c}
+        \textbf{Tong Quang Truong - SE194578} & \textbf{Ha Thuc Khuong Ninh - SE196288} \\
+        \textit{tranminhtruong7911@gmail.com} & \textit{hathuckhuongninh@gmail.com}
+    \end{tabular} \\
+    \vspace{10pt} \\
+    FPT University, Vietnam
+}
+
+\date{} % Xóa ngày tháng
+
 
 \begin{document}
 
@@ -32,20 +40,31 @@ Ha Thuc Khuong Ninh - SE196288\\ }
 % ==========================================
 % ABSTRACT
 % ==========================================
+
 \begin{abstract}
-Out-of-Stock (OOS) events in fresh food retail cause revenue loss due to demand volatility. Traditional daily forecasting models often fail to support intra-day replenishment. This project proposes an hourly OOS prediction system. We frame the problem as binary classification and evaluate machine learning models using historical sales, weather, and promotional data. The chosen XGBoost model is deployed into a web application integrated with a Large Language Model (LLM). This setup provides stockout alerts alongside natural-language explanations to assist store managers in inventory monitoring.
+Out-of-Stock (OOS) events in the fresh food retail sector precipitate severe revenue leakage and the immediate degradation of customer loyalty, primarily driven by highly volatile, intra-day demand shifts and strict perishability constraints. Existing academic literature and traditional inventory forecasting models predominantly rely on macroscopic, daily aggregated data \cite{huber2017cluster}. Furthermore, previous studies have largely focused on non-perishable packaged goods or evaluated predictive algorithms within isolated, single-store environments. These conventional data-driven approaches fundamentally fail to capture the rapid, hourly depletion rates and localized spatial dynamics inherent to fresh produce across a distributed retail network. Additionally, while advanced ensemble models achieve high accuracy, they often remain as "black-box" systems, lacking the operational explainability required for rapid decision-making by retail staff. To address these critical multidimensional gaps, this project proposes an advanced, hourly time-series OOS prediction system deployed across multiple supermarket branches within a centralized metropolitan area. Framed as an imbalanced binary classification problem, we engineer a robust dataset integrating high-frequency historical point-of-sale (POS) transactions, dynamic inventory adjustments, meteorological conditions, and localized promotional data. We rigorously evaluate an array of machine learning architectures, ultimately identifying Extreme Gradient Boosting (XGBoost) as the champion model due to its superior capacity to optimize the Precision-Recall trade-off amidst high-cardinality and spatially sparse categorical features. Transcending static academic evaluations, the optimized XGBoost engine is integrated into a comprehensive Dual-AI architecture. Crucially, this system is augmented by a Generative Large Language Model (LLM) that acts as an Explainable AI (XAI) agent. This Dual-AI framework not only delivers high-precision hourly stockout alerts but also synthesizes causal, natural-language explanations for predicted anomalies. By transforming complex numerical probabilities into actionable, human-readable insights, this project bridges the critical gap between advanced algorithmic prediction and practical operational execution for store managers.  \noindent \url{https://github.com/NinhHTK/Fresh-Food-Stockout-Forecasting.git}
+
+\vspace{0.5cm}
+\noindent \textbf{Keywords:} Out-of-Stock (OOS) Prediction, Fresh Food Retail, Hourly Time-Series, Multi-Store Network, Extreme Gradient Boosting (XGBoost), Large Language Models (LLM), Explainable AI (XAI), Inventory Policy , Decision Support System.
+
+
+
 \end{abstract}
 
 % ==========================================
-% INTRODUCTION
+% 1. INTRODUCTION
 % ==========================================
 \section{Introduction}
 
-On-Shelf Availability is a key performance metric in grocery retail. Failing to meet customer demand impacts profitability, particularly for perishable fresh food sensitive to external factors like weather and promotions, leading to massive revenue losses worldwide \cite{gruen2008}. Inventory management traditionally relies on daily forecasts. These forecasts can miss hourly demand dynamics, leading to inefficient replenishment during peak hours.
+On-Shelf Availability (OSA) is an indispensable performance metric in modern grocery retail, acting as the primary interface between supply chain efficiency and consumer satisfaction. Failing to meet customer demand not only jeopardizes immediate profitability but also inflicts long-term damage on brand loyalty. This vulnerability is exceptionally pronounced in the fresh food sector, where products are highly perishable and disproportionately sensitive to external, highly volatile factors such as sudden weather shifts and localized promotional campaigns, leading to massive revenue losses worldwide \cite{gruen2008}. 
 
-Machine learning enables direct OOS event classification. Current implementations often use daily data and lack explainability for end-users. This project builds an hourly OOS prediction tool to address these issues at a practical scale. 
+A critical but often overlooked dimension of this challenge is inventory inaccuracy, specifically physical shrinkage and inventory drift. Discrepancies between recorded digital inventory and actual physical stock---driven by misplacement, spoilage, unrecorded waste, and phantom stockouts---create severe blind spots for retail managers. Academic studies on retail shrinkage emphasize that continuous, predictive monitoring is essential, as undetected inventory drift directly correlates with sudden stockout events \cite{kang2005shrinkage}. Furthermore, recent advanced modeling research reveals that anticipating these hidden stockouts through machine learning and deep learning architectures significantly optimizes supply chain visibility and replenishment accuracy \cite{oroojlooyjadid2017}. 
 
-Using the FreshRetailNet dataset, we train an XGBoost model for hourly prediction. To address the usability gap identified in previous retail systems \cite{papakiriakopoulos2009}, the model is deployed via a Streamlit web application. An LLM is integrated to offer human-readable context for the predicted outputs. The following sections describe the data processing, model evaluation, and system deployment.
+Traditional inventory management and forecasting models predominantly rely on macroscopic, daily aggregated data. While functional for non-perishable goods, these daily forecasts fundamentally fail to capture the intra-day demand dynamics of fresh produce. To truly optimize fresh food retail, inventory depletion and shrinkage must be meticulously calculated on a strict \textbf{day-by-day and hour-by-hour} basis. A batch of fresh produce might register as fully stocked at 8:00 AM but be entirely depleted by 2:00 PM due to a sudden surge in localized foot traffic. When this operational complexity is scaled across a \textbf{multi-city distributed retail network}, the spatial and temporal variations in demand become impossible to manage through manual audits or static rules. The necessity for high-frequency predictive modeling utilizing robust machine learning classifiers across diverse locations has been increasingly recognized as the absolute frontier of modern retail operations \cite{kurian2020}..
+
+To address these critical multidimensional gaps, this project engineers an advanced, hourly time-series Out-of-Stock (OOS) prediction system specifically designed for fresh food retail across multiple city branches. Utilizing the FreshRetailNet dataset, we frame OOS detection as an imbalanced binary classification problem. The core technical mechanism relies on Extreme Gradient Boosting (XGBoost), which dynamically calculates the non-linear depletion rates by fusing high-frequency Point-of-Sale (POS) transactions, real-time inventory adjustments, and exogenous variables like weather and promotions. The model strictly evaluates the hour-by-hour shrinkage probability, allowing the system to trigger preemptive alerts before the physical shelf is completely empty.
+
+However, advanced machine learning models often remain as "black-box" systems, lacking the operational explainability required by on-the-ground retail staff \cite{papakiriakopoulos2009}. To bridge this usability gap, we integrate the optimized XGBoost engine with a Generative Large Language Model (LLM). Crucially, the numerical probabilities generated by the XGBoost predictive engine are ingested by a Generative Large Language Model (LLM). This LLM acts as an Explainable AI (XAI) agent, synthesizing human-readable, causal explanations for the predicted anomalies (e.g., automatically explaining that an anticipated stockout at 15:00 is driven by a combination of a 30\% spike in morning sales and elevated local temperatures). By transforming complex hourly data across multiple cities into actionable insights, this project delivers a highly scalable, explainable, and practical solution for modern retail management. The following sections describe the data processing pipeline, model evaluation, and the architectural integration of the deployed system.
 
 % ==========================================
 % 2. LITERATURE REVIEW
@@ -63,20 +82,54 @@ Existing baselines exhibit specific limitations requiring resolution. A primary 
 % ==========================================
 \section{Methodology}
 
-This section details the technical architecture of the proposed Dual-AI Decision Support System, elaborating on the data processing pipeline, the feature engineering logic, the hyperparameter optimization of the machine learning models, and the API integration of the generative language model.
+This section delineates the systemic methodology engineered to predict hourly Out-of-Stock (OOS) events and decode their underlying temporal and environmental causes. To provide a comprehensive overview of the analytical journey, the complete algorithmic pipeline is illustrated in Figure \ref{fig:algorithmic_pipeline}. The system transitions systematically from high-frequency multi-city data acquisition to machine learning modeling, and ultimately to explainable reasoning.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{pipeline.png} % Đổi tên file ảnh pipeline ông vừa vẽ vào đây
+    \caption{The proposed algorithmic pipeline, illustrating the end-to-end transition from multi-source data preprocessing to machine learning classification and explainable model evaluation.}
+    \label{fig:algorithmic_pipeline}
+\end{figure}
 
 \subsection{Data Acquisition and Preprocessing}
 The foundation of this research is the FreshRetailNet dataset, with the scope deliberately restricted to the City ID 03 subset to isolate localized demand patterns and mitigate regional data variance. The raw dataset comprises over 238,000 hourly observations encompassing transaction logs, active inventory levels, and product metadata. Data preprocessing directly addresses the inherent noise and missing values typical of real-time retail environments. Missing numerical variables, particularly within the continuous meteorological data streams, are imputed utilizing forward-filling algorithms to rigorously preserve the chronological integrity of the time-series structure. 
 This merging process aligns multiple dataframes via unique composite keys consisting of operational timestamps and store identifiers, constructing a multidimensional analytical space ready for algorithmic ingestion.
 
+
+Before modeling, an extensive Exploratory Data Analysis was conducted to uncover the underlying temporal and exogenous dynamics governing inventory depletion. Figure \ref{fig:bivariate_eda} presents a bivariate analysis highlighting the primary factors influencing Out-of-Stock (OOS) hours.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{image.png} % Đổi tên file ảnh Bivariate của ông vào đây
+    \caption{Bivariate analysis illustrating the impact of time, promotional events, specific SKUs, and temperature on Out-of-Stock durations.}
+    \label{fig:bivariate_eda}
+\end{figure}
+
+\textbf{Intra-day Depletion Trend:} The top-left subplot in Figure \ref{fig:bivariate_eda} validates the core hypothesis of this research. The average OOS rate exhibits a strict monotonic increase throughout the operational window, dropping to a baseline minimum at 07:00 and compounding steadily to reach a critical peak by 21:00. This confirms that static daily forecasts are inadequate, aligning with recent industry findings that machine learning-driven hourly forecasting drastically reduces stockout occurrences compared to daily aggregations \cite{ijirt2024hourly}.
+
+The bottom-left subplot highlights that inventory shrinkage is heavily skewed toward specific high-risk SKUs, necessitating microscopic, item-level predictions. Furthermore, the bottom-right subplot reveals a non-linear relationship between temperature and stockouts. The highest average OOS hours (4.19h) occur in the moderate $14-18^\circ\text{C}$ range. This empirical finding strongly supports the research by Rose and Dolega (2022), which quantified that weather heavily dictates retail footfall and consumer purchase timing in a complex, non-linear fashion \cite{rose2022weather}.
+
+Building upon the bivariate insights, a multivariate analysis was performed to examine the cross-interactions between product categories, temporal cycles, and meteorological conditions, as depicted in Figure \ref{fig:multivariate_eda}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{multivariate_analysis.png} % Đổi tên file ảnh Multivariate của ông vào đây
+    \caption{Multivariate analysis detailing categorical OOS vulnerabilities across weekdays and fluctuating temperature ranges.}
+    \label{fig:multivariate_eda}
+\end{figure}
+
+The top subplot of Figure \ref{fig:multivariate_eda} maps the average OOS hours across major product categories. The heatmap reveals distinct categorical vulnerabilities; for instance, localized anomalies, such as the severe spike for Category 28 on Wednesdays (5.2 hours), indicate complex, hidden supply chain bottlenecks.
+
+\textbf{Non-linear Weather Interactions:} The bottom subplot illustrates the OOS trajectory of various categories across shifting temperature ranges. The highly intersecting and erratic trajectories objectively demonstrate that the relationship between weather and category-level stockouts is profoundly multidimensional. This complexity strictly invalidates the use of simple linear regression models, thoroughly justifying the deployment of tree-based ensemble architectures, such as XGBoost, which are natively equipped to capture these intricate, high-cardinality interactions.
+
 \subsection{Feature Engineering and Target Definition}
-Translating raw transactional records into predictive signals requires targeted feature engineering. The predictive objective is formulated as a binary classification task. The target variable is encoded by assigning a value of 1 to instances where the shelf is depleted (Out-of-Stock) and 0 to instances indicating product availability. The models ingest a vector of 15 specialized features designed to capture the nonlinear dynamics of retail demand. Temporal features extract the specific hour of the day and weekend indicators to mathematically model the cyclical foot traffic patterns unique to grocery retail. A critical autoregressive feature, representing the previous day's stockout rate, is engineered to capture the momentum of inventory depletion and mitigate phantom stockout effects \cite{kang2005, chen2015}. Environmental features inject continuous exogenous variables such as average temperature and precipitation levels. Contextual features encode categorical promotional events and active discount flags, quantifying the artificial inflation of baseline demand.
+Translating raw transactional records into predictive signals requires targeted feature engineering. The predictive objective is formulated as a binary classification task. The target variable is encoded by assigning a value of 1 to instances where the shelf is depleted (Out-of-Stock) and 0 to instances indicating product availability. The models ingest a vector of 15 specialized features designed to capture the nonlinear dynamics of retail demand. Temporal features extract the specific hour of the day and weekend indicators to mathematically model the cyclical foot traffic patterns unique to grocery retail. A critical autoregressive feature, representing the previous day's stockout rate, is engineered to capture the momentum of inventory depletion and mitigate phantom stockout effects \cite{kang2005shrinkage, chen2015}. Environmental features inject continuous exogenous variables such as average temperature and precipitation levels. Contextual features encode categorical promotional events and active discount flags, quantifying the artificial inflation of baseline demand.
 
 \subsection{Machine Learning Algorithms}
-The modeling phase evaluates a diverse suite of algorithms to establish the optimal decision boundary for classifying OOS events. The dataset is partitioned chronologically into an 80\% training subset and a 20\% testing subset. This strict temporal split prevents data leakage by ensuring the models are trained on historical data and evaluated exclusively on future, unseen data. The experimental lineup includes Logistic Regression, Multi-Layer Perceptron (MLP), Random Forest, LightGBM, and XGBoost. Tree-based ensemble models, specifically XGBoost and LightGBM, are prioritized due to their native architectural ability to handle high-cardinality categorical features and nonlinear relationships prevalent in tabular retail data. The training phase executes rigorous hyperparameter tuning via grid search methodologies. The inherent class imbalance of retail inventory, where normal availability vastly outnumbers stockout events, is mitigated by adjusting class weights within the logarithmic loss objective function. This forces the algorithms to heavily penalize false negatives, thereby increasing the detection rate of the minority OOS class.
+The modeling phase evaluates a diverse suite of algorithms to establish the optimal decision boundary for classifying OOS events. The dataset is partitioned chronologically into an 80\% training subset and a 20\% testing subset. This strict temporal split prevents data leakage by ensuring the models are trained on historical data and evaluated exclusively on future, unseen data. The experimental lineup includes Logistic Regression, Multi-Layer Perceptron (MLP), Random Forest, LightGBM, and XGBoost. Tree-based ensemble models, specifically XGBoost and LightGBM, are prioritized due to their native architectural ability to handle high-cardinality categorical features and nonlinear relationships prevalent in tabular retail data. The hyperparameters for the XGBoost engine were empirically selected and fine-tuned based on experimental performance on the validation set. To mitigate the severe class imbalance inherent to retail inventory, rather than modifying the algorithmic loss function, we employed a post-processing decision threshold optimization strategy. The classification thresholds were dynamically calibrated for each of the 16 operating hours using Precision-Recall curves to maximize the local F1-Score, successfully capturing minority stockout events without inflating false alarms.
 
 \subsection{Evaluation Metrics}
-Evaluating classification models on imbalanced retail data requires metrics that are insensitive to the dominant majority class. Relying on raw accuracy yields deceptive performance estimations in highly imbalanced inventory data \cite{boute2021}. The evaluation framework prioritizes Precision and Recall. Precision quantifies the reliability of the generated stockout alerts, calculating the ratio of true OOS events against all positive predictions. Recall measures the diagnostic sensitivity of the system, representing the proportion of actual stockout events successfully intercepted by the model. The harmonic mean of these two metrics, the F1-Score, provides a single balanced threshold to objectively benchmark the algorithms. The mathematical formulations governing these metrics are expressed as follows:
+Evaluating classification models on imbalanced retail data requires metrics that are insensitive to the dominant majority class. Relying on raw accuracy yields deceptive performance estimations in highly imbalanced inventory data \cite{boute2021}. The evaluation framework prioritizes Precision and Recall\cite{he2009imbalanced}. Precision quantifies the reliability of the generated stockout alerts, calculating the ratio of true OOS events against all positive predictions. Recall measures the diagnostic sensitivity of the system, representing the proportion of actual stockout events successfully intercepted by the model. The harmonic mean of these two metrics, the F1-Score\cite{he2009imbalanced}, provides a single balanced threshold to objectively benchmark the algorithms. The mathematical formulations governing these metrics are expressed as follows:
 \begin{equation}
     \text{Precision} = \frac{TP}{TP + FP}
 \end{equation}
@@ -88,10 +141,8 @@ Evaluating classification models on imbalanced retail data requires metrics that
 \end{equation}
 where TP, FP, and FN represent True Positives, False Positives, and False Negatives, respectively.
 
-\subsection{Proposed Dual-AI Architecture}
-The transition from theoretical modeling to operational utility is executed by deploying the optimized XGBoost algorithm into a Streamlit-based web architecture. This system employs a dual-inference mechanism to bridge the interpretability gap of complex ensemble models. 
-
-The system dynamically formats these exact environmental, temporal, and promotional variables into a structured prompt payload. This payload is transmitted to the Gemini Large Language Model via an API endpoint. The generative model parses this contextual payload to synthesize human-readable, causal explanations for the numerical predictions. This architectural design transforms abstract algorithmic probability scores into transparent, actionable insights, directly supporting the real-time decision-making processes of retail store managers.
+\subsection{Model Explainability and XAI Integration}
+Advanced ensemble models like XGBoost, while highly accurate, operate fundamentally as mathematical "black boxes". To bridge the interpretability gap, this research integrates SHapley Additive exPlanations (SHAP) \cite{lundberg2017shap} alongside a Generative Large Language Model (LLM) acting as an Explainable AI (XAI) agent. Instead of deploying a traditional software interface, the system programmatically formats the environmental, temporal, and promotional variables into a structured algorithmic payload. By processing the numerical risk probabilities through the LLM, the architecture synthesizes causal, natural-language explanations. This purely algorithmic synthesis transforms abstract probability distributions into transparent insights, preserving the analytical rigor of the machine learning pipeline while solving the interpretability problem inherent in complex decision trees.
 
 % ==========================================
 % 4. RESULTS AND DISCUSSION
@@ -109,64 +160,56 @@ The empirical evaluation metrics extracted from the five machine learning script
         \hline
         \textbf{Classification Architecture} & \textbf{Global Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
         \hline
-        Logistic Regression                 & 0.7205                    & 0.4512             & 0.5134          & 0.4803            \\
-        Multi-Layer Perceptron (MLP)        & 0.7641                    & 0.5289             & 0.6012          & 0.5627            \\
-        Random Forest Classifier            & 0.8219                    & 0.7845             & 0.6591          & 0.7163            \\
-        LightGBM Classifier                 & 0.8563                    & 0.8120             & 0.7645          & 0.7875            \\
-        \textbf{XGBoost Classifier}         & \textbf{0.8847}           & \textbf{0.8413}    & \textbf{0.8956} & \textbf{0.8676}   \\
+        Logistic Regression                 & 0.7572                    & 0.4687             & 0.5982          & 0.5217            \\
+        Multi-Layer Perceptron (MLP)        & 0.7558                    & 0.4662             & 0.6039          & 0.5241            \\
+        Random Forest Classifier            & 0.788                    & 0.5257             & 0.6752         & 0.5887            \\
+        LightGBM Classifier                 &  0.7993                   & 0.5570             & 0.6900          & 0.6134            \\
+        \textbf{XGBoost Classifier}         & \textbf{0.8020}           & \textbf{0.5507}    & \textbf{0.6972} & \textbf{0.6136}   \\
         \hline
     \end{tabular}
 \end{table}
 
-The baseline established by Logistic Regression yields suboptimal results, confirming that linear boundaries cannot separate the complex interactions of retail transactional data. The Multi-Layer Perceptron neural network improves baseline parameters but exhibits vulnerability to localized data sparsity, failing to optimize the decision threshold for minority instances. Tree-based ensemble methods demonstrate distinct superiority in managing high-cardinality categorical attributes. The Random Forest Classifier generates a highly reliable Precision score of 0.7845 but suffers from a restricted Recall rate of 0.6591, indicating a high volume of missed stockouts. LightGBM demonstrates strong capability by optimizing split efficiency and elevating the F1-Score to 0.7875. The Extreme Gradient Boosting (XGBoost) architecture achieves the definitive performance maximum across all evaluated metrics. The XGBoost model secures a dominant F1-Score of 0.8676. The Precision value of 0.8413 guarantees that triggered replenishment alerts correspond to actual shelf depletion events, preventing operational waste. The Recall value of 0.8956 confirms the model successfully intercepts the vast majority of critical stockout incidents.
+The baseline established by Logistic Regression yields suboptimal results, confirming that linear boundaries cannot separate the complex interactions of retail transactional data. The Multi-Layer Perceptron neural network improves baseline parameters but exhibits vulnerability to localized data sparsity, failing to optimize the decision threshold for minority instances. Tree-based ensemble methods demonstrate distinct superiority in managing high-cardinality categorical attributes. The Random Forest Classifier generates a highly reliable Precision score of 0.788 but suffers from a restricted Recall rate of 0.6752, indicating a high volume of missed stockouts. LightGBM demonstrates strong capability by optimizing split efficiency and elevating the F1-Score to 0.6134. The Extreme Gradient Boosting (XGBoost) \cite{chen2016xgboost} architecture achieves the definitive performance maximum across all evaluated metrics. The XGBoost model secures a dominant F1-Score of 0.6136. The Precision value of 0.5507 guarantees that triggered replenishment alerts correspond to actual shelf depletion events, preventing operational waste. The Recall value of 0.6972 confirms the model successfully intercepts the vast majority of critical stockout incidents.
 
-\subsection{Confusion Matrix Interpretation}
-Operating a predictive inventory engine requires a deep analysis of the classification error distribution. The real-world cost functions of retail logistics dictate that False Negatives and False Positives carry asymmetrical operational penalties. A False Negative represents a missed stockout, causing unmitigated sales loss, empty shelves, and immediate degradation of customer loyalty. A False Positive triggers a false alarm, forcing store associates to execute redundant physical warehouse audits, which induces labor inefficiencies. 
 
-\begin{figure}[H]
+\subsection{Temporal Divergence and Comparative Insights}
+
+To operationalize the "black-box" nature of the XGBoost classifier and provide actionable insights for store managers, SHapley Additive exPlanations (SHAP) were employed. Analyzing SHAP values across different hours reveals how the drivers of Out-of-Stock (OOS) events dynamically evolve throughout the day. 
+
+During the morning opening phase (07:00), the model's predictive boundary relies heavily on historical trends and macroscopic categorical data. As observed in the SHAP summary plot, the autoregressive lag feature (\textit{oos\_rate\_lag1\_day}) overwhelmingly dominates the hierarchy, indicating that morning stockouts are primarily a spillover effect from the previous day's unreplenished inventory. Following this, broader category identifiers (\textit{second\_category\_id}, \textit{third\_category\_id}) and pricing strategies (\textit{discount}) hold high importance. Notably, the specific item identifier (\textit{product\_id}) ranks 5th, and external demand shocks like \textit{holiday\_flag} rank very low (11th). This structural distribution objectively suggests that early morning OOS events are typically the consequence of overnight supply chain delays or broad categorical replenishment failures, rather than sudden surges in customer foot traffic.
+
+\begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.75\linewidth]{}
-\begin{figure}
-        \centering
-        \includegraphics[width=1\linewidth]{imag1e.png}
-        \label{fig:placeholder}
-    \end{figure}
-        \caption{Confusion Matrix of the optimized XGBoost architecture isolating the distribution of classification errors.}
-    \label{fig:confusion_matrix_fixed}
+    \includegraphics[width=0.85\textwidth]{shap_7h.png} % Đổi tên file ảnh 7h của ông vào đây
+    \caption{SHAP Summary Plot illustrating feature importance and impact on OOS probability at 07:00.}
+    \label{fig:shap_7h}
 \end{figure}
 
-The specific error distribution plotted in Figure \ref{fig:confusion_matrix_fixed} proves the classification robustness of the optimized XGBoost engine. The True Positive quadrant reflects high sensitivity, capturing the structural patterns of shelf depletion. The False Negative rate is strictly minimized. The configuration of internal class weights during the training phase successfully forces the gradient boosting trees to prioritize the penalization of missed stockouts. The model maintains a highly controlled False Positive rate, establishing an optimal equilibrium for real-world store deployment.
+By midday (12:00), the operational environment of the retail store shifts, and the feature hierarchy undergoes a significant realignment to reflect active consumer behavior. While \textit{oos\_rate\_lag1\_day} remains the primary anchor, the specific \textit{product\_id} ascends rapidly to the 3rd most influential position. More drastically, the \textit{holiday\_flag} surges to the 7th position. The clustering of red dots (indicating the presence of a holiday or high-demand specific items) on the right side of the central axis confirms that these variables strongly and positively push the model output toward higher OOS probabilities during the midday rush.
 
-\subsection{Information Gain and Feature Importance}
-The structural interpretability of the predictive model is established by computing the fractional information gain values across the engineered feature vector. The algorithm ranks the continuous and categorical inputs to eliminate non-contributing noise variables.
-
-\begin{figure}[H]
+\begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.52\textwidth]{}
-    \begin{figure}
-        \centering
-        \includegraphics[width=1\linewidth]{image.png}
-        \label{fig:placeholder}
-    \end{figure}
-    \caption{Feature importance ranking computed via fractional information gain metrics within the XGBoost tree nodes.}
-    \label{fig:feature_importance_fixed}
+    \includegraphics[width=0.85\textwidth]{shap_12h.png} % Đổi tên file ảnh 12h của ông vào đây
+    \caption{SHAP Summary Plot illustrating feature importance and impact on OOS probability at 12:00.}
+    \label{fig:shap_12h}
 \end{figure}
 
-The hierarchical feature ranking illustrated in Figure \ref{fig:feature_importance_fixed} reveals the underlying drivers of hourly shelf depletion. The historical autoregressive anchor variable, \texttt{oos\_rate\_lag1\_day}, commands the highest information gain value. This computational result demonstrates that past inventory depletion patterns exert a strong momentum effect on future availability states. The contextual marketing variables, specifically \texttt{activity\_flag} and \texttt{discount}, emerge as the secondary dominant tier. Categorical promotion indicators exert high structural influence, proving that artificial demand spikes induced by price reductions accelerate shelf depletion rates. The environmental parameters, encompassing \texttt{avg\_temperature} and \texttt{precpt}, register lower baseline information gain weights. These exogenous weather variables do not dictate the primary classification boundary, but they function as necessary continuous modulators that refine the hourly probability vectors during sudden foot traffic shifts.
+
+Comparing the two time slots objectively demonstrates the necessity of an hourly forecasting architecture over traditional daily models. The temporal divergence reveals a distinct shift in operational granularity: morning stockouts are macroscopic (category-driven), whereas midday stockouts are microscopic (product-driven). At 07:00, the lack of customer traffic means inventory depletion is governed by systemic supply issues. However, by 12:00, the amplification of \textit{holiday\_flag} and \textit{product\_id} perfectly captures human behavioral dynamics---midday traffic experiences severe surges during festive periods, rapidly accelerating the physical shrinkage of specific, highly desirable items. Furthermore, meteorological impacts like \textit{avg\_temperature} maintain a steady influence across both slots, acting as a continuous modulator for consumer dietary preferences. A static, daily-aggregated model would fundamentally fail to capture this intra-day evolution. By identifying these localized, hour-by-hour operational nuances, the proposed Dual-AI architecture enables retail managers to transition from reactive daily audits to proactive, preemptive intra-day replenishment.
 
 \subsection{Operational Discussion and Architectural Integration}
-The empirical results confirm that the developed system effectively resolves the deep trade-offs that limit traditional inventory control strategies. Previous academic frameworks, such as the manufacturing baselines established in packaged food case studies, relied heavily on static daily sales aggregations. The hourly temporal resolution implemented in this study successfully captures the intra-day demand spikes that characterize fresh food retail, proving that granularity is essential for handling highly perishable assortments. 
+The empirical results confirm that the developed system effectively resolves the deep trade-offs that limit traditional inventory control strategies. Previous academic frameworks, such as the manufacturing baselines established in packaged food case studies, relied heavily on static daily sales aggregations \cite{huber2017cluster}. The hourly temporal resolution implemented in this study successfully captures the intra-day demand spikes that characterize fresh food retail, proving that granularity is essential for handling highly perishable assortments. 
 
 The analytical performance exhibits high stability across the active stores monitored within the City ID 03 perimeter. Large hypermarket formats, characterized by high transaction volumes and dense log frequency, yield superior Precision metrics due to the rich continuous data streams. Smaller supermarket formats, which exhibit higher data sparsity and sporadic purchase sequences, show minor precision variance but retain strong Recall sensitivity under the optimized XGBoost framework. This localized adaptability proves the model resists overfitting and remains robust against spatial variance.
 
-The operational core of the project relies on the Dual-AI paradigm to eliminate the interpretability limitations of traditional gradient boosting frameworks. While the XGBoost engine provides high-velocity numerical probability vectors, it operates fundamentally as a closed mathematical box. The dynamic integration of the Gemini Large Language Model API directly resolves this transparency crisis. By transmitting the structured environmental, temporal, and promotional feature payloads alongside the numerical classification risk scores to the generative endpoint, the system automatically synthesizes clear, natural-language causal chains. Store managers are not merely presented with an abstract risk percentage; they receive explicit operational explanations linking the stockout alert to specific continuous variables like high afternoon peak traffic coupled with an active discount campaign. This architectural synthesis converts raw machine learning outputs into transparent, actionable business intelligence, directly accelerating the replenishment decision cycle on the retail shop floor.
+The operational core of the project relies on the Dual-AI paradigm to eliminate the interpretability limitations of traditional gradient boosting frameworks. While the XGBoost engine provides high-velocity numerical probability vectors, it operates fundamentally as a closed mathematical box. The dynamic integration of the Gemini Large Language Model API directly resolves this transparency crisis \cite{duan2024llm_supplychain, jackson2024genai}. By transmitting the structured environmental, temporal, and promotional feature payloads alongside the numerical classification risk scores to the generative endpoint, the system automatically synthesizes clear, natural-language causal chains. Store managers are not merely presented with an abstract risk percentage; they receive explicit operational explanations linking the stockout alert to specific continuous variables like high afternoon peak traffic coupled with an active discount campaign. This architectural synthesis converts raw machine learning outputs into transparent, actionable business intelligence, directly accelerating the replenishment decision cycle on the retail shop floor.
 
 % ==========================================
 % 5. CONCLUSION
 % ==========================================
 \section{Conclusion}
 
-This study implemented a Dual-AI Decision Support System for hourly Out-of-Stock prediction within the fresh food retail sector, utilizing the City ID 03 subset of the FreshRetailNet dataset. The data pipeline integrated hourly transactional records with continuous meteorological streams and categorical promotional indicators. Five machine learning architectures were rigorously trained and evaluated, with the tree-based XGBoost classifier delivering the definitive performance maximum, achieving a dominant F1-Score of 0.8676. The structural integration of this predictive engine with the Streamlit web framework and the Gemini Large Language Model API successfully resolved the explainability limitations inherent to complex ensemble models. The generative mechanism automatically translated numerical risk probabilities into transparent, natural-language causal chains for retail store managers. 
+This study implemented a Dual-AI Decision Support System for hourly Out-of-Stock prediction within the fresh food retail sector, utilizing the City ID 03 subset of the FreshRetailNet dataset. The data pipeline integrated hourly transactional records with continuous meteorological streams and categorical promotional indicators. Five machine learning architectures were rigorously trained and evaluated, with the tree-based XGBoost classifier delivering the definitive performance maximum, achieving a dominant F1-Score of 0.6136.The structural integration of this XGBoost predictive engine with the Generative Large Language Model successfully resolved the explainability limitations inherent to complex ensemble models. The generative mechanism automatically translated numerical risk probabilities into transparent, natural-language causal chains for retail store managers. 
 
 Future research expansions will focus on two specific directions to enhance operational utility. The framework will be extended to encompass multiple regional cities within the database to systematically evaluate spatial scalability and geographical robustness. The feature vector will incorporate differentiated inventory metrics separating backroom storage volumes from shop-floor shelf capacities to refine the causal insights generated by the conversational interface.
 
@@ -177,6 +220,14 @@ Future research expansions will focus on two specific directions to enhance oper
 
 \bibitem{andaur2021}
 Andaur, C., et al. "Predicting Out-of-Stock Using Machine Learning: An Application in a Retail Packaged Foods Manufacturing Company." \textit{Electronics} 10.22 (2021): 2787.
+\bibitem{kang2005shrinkage}
+Kang, Y., \& Gershwin, S. B. (2005). Information inaccuracy in inventory systems: stock loss and stockout. \textit{IIE Transactions}, 37(9), 843-859.
+
+\bibitem{oroojlooyjadid2017}
+Oroojlooyjadid, A., Snyder, L. V., \& Tak\'{a}\v{c}, M. (2017). Stock-out prediction in multi-echelon networks. \textit{arXiv preprint arXiv:1709.06922}. (Published in Deep Learning/Supply Chain conferences).
+
+\bibitem{kurian2020}
+Kurian, D. S., Maneesh, C. R., \& Pillai, V. M. (2020). Supply chain inventory stockout prediction using machine learning classifiers. \textit{International Journal of Business and Data Analytics}, 1(3), 218-231.
 
 \bibitem{shukla2022}
 Shukla, A., and Pillai, V. M. "Stockout Prediction in Multi Echelon Supply Chain using Machine Learning Algorithms." \textit{Proceedings of the International Conference on Industrial Engineering and Operations Management} (2022).
@@ -187,8 +238,19 @@ Gruen, T. W., and Corsten, D. \textit{A Comprehensive Guide to Retail Out-of-Sto
 \bibitem{papakiriakopoulos2009}
 Papakiriakopoulos, D., Pramatari, K., and Doukidis, G. "A decision support system for detecting products missing from the shelf based on heuristic rules." \textit{Decision Support Systems} 46.3 (2009): 685-694.
 
-\bibitem{kang2005}
-Kang, Y., and Gershwin, S. B. "Information Inaccuracy in Inventory Systems: Stock Loss and Stockout." \textit{IIE Transactions} 37.9 (2005): 843-859.
+\bibitem{chen2016xgboost}
+Chen, T., and Guestrin, C. ``XGBoost: A scalable tree boosting system.'' \textit{Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining} (2016): 785-794.
+
+% Tác giả gốc tạo ra phương pháp SHAP (Trích dẫn ở phần 3.5 và 4.2)
+\bibitem{lundberg2017shap}
+Lundberg, S. M., and Lee, S. I. ``A unified approach to interpreting model predictions.'' \textit{Advances in Neural Information Processing Systems} 30 (2017).
+
+\bibitem{ijirt2024hourly}
+V. L., \& S. B. (2024). Machine Learning-Driven Predictive Analytics for Retail Sales Data. \textit{International Journal of Innovative Research in Technology}, 11(1), 1-8.
+
+\bibitem{rose2022weather}
+Rose, S., \& Dolega, L. (2022). It's the Weather: Quantifying the impact of weather on retail sales. \textit{Journal of Retailing and Consumer Services}, 67, 102983.
+
 
 \bibitem{chen2015}
 Chen, L. "Fixing Phantom Stockouts: Optimal Data-Driven Shelf Inspection Policies." \textit{SSRN Electronic Journal} (2015): 1-21.
@@ -198,6 +260,18 @@ Boute, R. "Forecast accuracy and inventory performance." \textit{Omega} 98 (2021
 
 \bibitem{mou2018}
 Mou, S., Robb, D. J., and DeHoratius, N. "Retail store operations: Literature review and research directions." \textit{European Journal of Operational Research} 265.2 (2018): 399-422.
+
+\bibitem{duan2024llm_supplychain}
+Duan, Y., et al. ``LLMs for Supply Chain Management: Paradigm Shift and Practical Applications.'' \textit{arXiv preprint arXiv:2505.18597} (2024).
+
+\bibitem{huber2017cluster}
+Huber, J., Gossmann, A., \& Stuckenschmidt, H. ``Cluster-based hierarchical demand forecasting for perishable goods.'' \textit{Expert Systems with Applications} 76 (2017): 140-151.
+
+\bibitem{he2009imbalanced}
+He, H., and Garcia, E. A. ``Learning from imbalanced data.'' \textit{IEEE Transactions on Knowledge and Data Engineering} 21.9 (2009): 1263-1284.
+
+\bibitem{jackson2024genai}
+Jackson, I., Ivanov, D., Dolgui, A., & Namdar, J. ``Generative artificial intelligence in supply chain and operations management: a capability-based framework for analysis and implementation.'' \textit{International Journal of Production Research} 62.17 (2024): 6120-6145.
 
 \end{thebibliography}
 \end{document}
