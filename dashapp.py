@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import os
 import joblib
-import gdown
 import matplotlib.pyplot as plt
 import seaborn as sns
 import ast
@@ -577,7 +576,15 @@ elif len(selected_models) > 2:
     st.warning("You can only display up to 2 models at once. Showing the first 2 models.")
     selected_models = selected_models[:2]
 
-tabs = st.tabs(["Performance Metrics", "Feature Importance", "Confusion Matrix", "SHAP Summary"])
+tabs = st.tabs(["Performance Metrics", "Feature Importance", "Confusion Matrix"])
+
+model_color_map = {
+    "XGBoost Model": {"bar_color": "#E87722", "cmap": "Oranges", "data_key": "XGBoost"},
+    "LightGBM Model": {"bar_color": "#2E5090", "cmap": "Blues", "data_key": "LightGBM"},
+    "Random Forest Model": {"bar_color": "#228B22", "cmap": "Greens", "data_key": "Random Forest"},
+    "Logistic Regression Model": {"bar_color": "#6E44FF", "cmap": "Purples", "data_key": "Logistic"},
+    "MLP Model": {"bar_color": "#D62828", "cmap": "coolwarm", "data_key": "MLP"}
+}
 
 for tab_index, tab in enumerate(tabs):
     with tab:
@@ -623,6 +630,7 @@ for tab_index, tab in enumerate(tabs):
                             st.write("Display the model performance metrics (accuracy, precision, recall, F1, AUC) when data is available.")
                 elif tab_index == 1:
                     st.markdown(f"### {model_name}")
+                    bar_color = model_color_map.get(model_name, {}).get("bar_color", '#1f77b4')
                     if model_name == "Logistic Regression Model":
                         # Feature importance data for Logistic Regression
                         feature_importance_data = {
@@ -652,7 +660,7 @@ for tab_index, tab in enumerate(tabs):
                         fig, ax = plt.subplots(figsize=(10, 6))
                         df_importance = pd.DataFrame(feature_importance_data)
                         df_importance = df_importance.sort_values("Importance (%)", ascending=True)
-                        ax.barh(df_importance["Feature"], df_importance["Importance (%)"], color='#1f77b4')
+                        ax.barh(df_importance["Feature"], df_importance["Importance (%)"], color=bar_color)
                         ax.set_xlabel("Feature contribution to model decision (%)", fontsize=10)
                         ax.set_ylabel("Input features", fontsize=10)
                         ax.set_title("Relative feature contribution (MLP)", fontsize=11, fontweight='bold')
@@ -669,7 +677,7 @@ for tab_index, tab in enumerate(tabs):
                         fig, ax = plt.subplots(figsize=(10, 6))
                         df_importance = pd.DataFrame(feature_importance_data)
                         df_importance = df_importance.sort_values("Importance (%)", ascending=True)
-                        ax.barh(df_importance["Feature"], df_importance["Importance (%)"], color='#E87722')
+                        ax.barh(df_importance["Feature"], df_importance["Importance (%)"], color=bar_color)
                         ax.set_xlabel("Feature contribution to model decision (%)", fontsize=10)
                         ax.set_ylabel("Input features", fontsize=10)
                         ax.set_title("Feature importance for XGBoost", fontsize=11, fontweight='bold')
@@ -686,7 +694,7 @@ for tab_index, tab in enumerate(tabs):
                         fig, ax = plt.subplots(figsize=(10, 6))
                         df_importance = pd.DataFrame(feature_importance_data)
                         df_importance = df_importance.sort_values("Importance (%)", ascending=True)
-                        ax.barh(df_importance["Feature"], df_importance["Importance (%)"], color='#228B22')
+                        ax.barh(df_importance["Feature"], df_importance["Importance (%)"], color=bar_color)
                         ax.set_xlabel("Feature contribution to model decision (%)", fontsize=10)
                         ax.set_ylabel("Input features", fontsize=10)
                         ax.set_title("Feature importance for Random Forest", fontsize=11, fontweight='bold')
@@ -703,7 +711,7 @@ for tab_index, tab in enumerate(tabs):
                         fig, ax = plt.subplots(figsize=(10, 6))
                         df_importance = pd.DataFrame(feature_importance_data)
                         df_importance = df_importance.sort_values("Importance (%)", ascending=True)
-                        ax.barh(df_importance["Feature"], df_importance["Importance (%)"], color='#2E5090')
+                        ax.barh(df_importance["Feature"], df_importance["Importance (%)"], color=bar_color)
                         ax.set_xlabel("Feature contribution to model decision (%)", fontsize=10)
                         ax.set_ylabel("Input features", fontsize=10)
                         ax.set_title("Feature importance for LightGBM", fontsize=11, fontweight='bold')
@@ -713,7 +721,179 @@ for tab_index, tab in enumerate(tabs):
                         st.write("Table/chart of the model's feature importance.")
                 elif tab_index == 2:
                     st.markdown(f"### {model_name}")
-                    st.write("Confusion matrix for evaluating correct and incorrect classifications.")
+                    # Add 16-hour confusion matrices
+                    st.markdown("### Confusion Matrix by Operating Hours")
+                    
+                    # Define confusion matrices for 16 hours
+                    hours_data = {
+                        "6h": {
+                            "XGBoost": [[15501, 971], [572, 1492]],
+                            "Random Forest": [[15261, 1211], [553, 1511]],
+                            "LightGBM": [[15434, 1038], [493, 1571]],
+                            "MLP": [[15217, 1255], [751, 1313]],
+                            "Logistic": [[15495, 977], [993, 1071]]
+                        },
+                        "7h": {
+                            "XGBoost": [[15404, 1215], [339, 1578]],
+                            "Random Forest": [[15278, 1341], [396, 1521]],
+                            "LightGBM": [[15834, 785], [466, 1451]],
+                            "MLP": [[15443, 1176], [768, 1149]],
+                            "Logistic": [[15553, 1066], [870, 1047]]
+                        },
+                        "8h": {
+                            "XGBoost": [[15439, 1090], [463, 1544]],
+                            "Random Forest": [[15349, 1180], [541, 1466]],
+                            "LightGBM": [[15595, 934], [476, 1531]],
+                            "MLP": [[15249, 1280], [834, 1173]],
+                            "Logistic": [[15481, 1048], [953, 1054]]
+                        },
+                        "9h": {
+                            "XGBoost": [[15063, 1236], [591, 1646]],
+                            "Random Forest": [[15179, 1120], [761, 1476]],
+                            "LightGBM": [[15335, 964], [682, 1555]],
+                            "MLP": [[14952, 1347], [942, 1295]],
+                            "Logistic": [[15268, 1031], [1149, 1088]]
+                        },
+                        "10h": {
+                            "XGBoost": [[14831, 1136], [911, 1658]],
+                            "Random Forest": [[14737, 1230], [990, 1579]],
+                            "LightGBM": [[14817, 1150], [897, 1672]],
+                            "MLP": [[14260, 1707], [1123, 1446]],
+                            "Logistic": [[14455, 1512], [1259, 1310]]
+                        },
+                        "11h": {
+                            "XGBoost": [[14175, 1377], [1138, 1846]],
+                            "Random Forest": [[14263, 1289], [1280, 1704]],
+                            "LightGBM": [[14410, 1142], [1245, 1739]],
+                            "MLP": [[13821, 1731], [1430, 1554]],
+                            "Logistic": [[13897, 1655], [1517, 1467]]
+                        },
+                        "12h": {
+                            "XGBoost": [[13364, 1786], [1277, 2109]],
+                            "Random Forest": [[13639, 1511], [1532, 1854]],
+                            "LightGBM": [[13403, 1747], [1320, 2066]],
+                            "MLP": [[13451, 1699], [1782, 1604]],
+                            "Logistic": [[11718, 3432], [1239, 2147]]
+                        },
+                        "13h": {
+                            "XGBoost": [[12964, 1863], [1474, 2235]],
+                            "Random Forest": [[12502, 2325], [1454, 2255]],
+                            "LightGBM": [[13094, 1733], [1577, 2132]],
+                            "MLP": [[12488, 2339], [1753, 1956]],
+                            "Logistic": [[11548, 3279], [1439, 2270]]
+                        },
+                        "14h": {
+                            "XGBoost": [[12337, 2181], [1551, 2467]],
+                            "Random Forest": [[11965, 2553], [1548, 2470]],
+                            "LightGBM": [[12669, 1849], [1761, 2257]],
+                            "MLP": [[10822, 3696], [1619, 2399]],
+                            "Logistic": [[10632, 3886], [1381, 2637]]
+                        },
+                        "15h": {
+                            "XGBoost": [[11731, 2469], [1632, 2704]],
+                            "Random Forest": [[11511, 2689], [1711, 2625]],
+                            "LightGBM": [[11592, 2608], [1647, 2689]],
+                            "MLP": [[11104, 3096], [1952, 2384]],
+                            "Logistic": [[10817, 3383], [1722, 2614]]
+                        },
+                        "16h": {
+                            "XGBoost": [[10919, 2787], [1791, 3039]],
+                            "Random Forest": [[10511, 3195], [1789, 3041]],
+                            "LightGBM": [[10254, 3452], [1610, 3220]],
+                            "MLP": [[9580, 4126], [1867, 2963]],
+                            "Logistic": [[9952, 3754], [1787, 3043]]
+                        },
+                        "17h": {
+                            "XGBoost": [[9561, 3562], [1705, 3708]],
+                            "Random Forest": [[8822, 4301], [1549, 3864]],
+                            "LightGBM": [[8847, 4276], [1460, 3953]],
+                            "MLP": [[8948, 4175], [2100, 3313]],
+                            "Logistic": [[9434, 3689], [2061, 3352]]
+                        },
+                        "18h": {
+                            "XGBoost": [[8277, 4284], [1488, 4487]],
+                            "Random Forest": [[8427, 4134], [1729, 4246]],
+                            "LightGBM": [[7931, 4630], [1401, 4574]],
+                            "MLP": [[8510, 4051], [2240, 3735]],
+                            "Logistic": [[8560, 4001], [2151, 3824]]
+                        },
+                        "19h": {
+                            "XGBoost": [[7688, 4413], [1476, 4959]],
+                            "Random Forest": [[7539, 4562], [1643, 4792]],
+                            "LightGBM": [[7478, 4623], [1444, 4991]],
+                            "MLP": [[7192, 4909], [1919, 4516]],
+                            "Logistic": [[7949, 4152], [2242, 4193]]
+                        },
+                        "20h": {
+                            "XGBoost": [[7607, 4130], [1681, 5118]],
+                            "Random Forest": [[7013, 4724], [1621, 5178]],
+                            "LightGBM": [[7642, 4095], [1743, 5056]],
+                            "MLP": [[5942, 5795], [1663, 5136]],
+                            "Logistic": [[5996, 5741], [1684, 5115]]
+                        },
+                        "21h": {
+                            "XGBoost": [[6722, 4619], [1525, 5670]],
+                            "Random Forest": [[6612, 4729], [1689, 5506]],
+                            "LightGBM": [[6635, 4706], [1566, 5629]],
+                            "MLP": [[6020, 5321], [1982, 5213]],
+                            "Logistic": [[6567, 4774], [2196, 4999]]
+                        }
+                    }
+                    
+                    model_props = model_color_map.get(model_name, {"cmap": "Blues", "data_key": "LightGBM"})
+                    cmap = model_props["cmap"]
+                    data_key = model_props["data_key"]
+
+                    # Create a 4x4 grid of confusion matrices
+                    fig, axes = plt.subplots(4, 4, figsize=(16, 14))
+                    fig.suptitle(f"Confusion Matrices by Operating Hours - {model_name}", fontsize=14, fontweight='bold')
+                    
+                    hours_list = list(hours_data.keys())
+                    for idx, hour in enumerate(hours_list):
+                        row = idx // 4
+                        col = idx % 4
+                        ax = axes[row, col]
+                        
+                        confusion_matrix = np.array(hours_data[hour][data_key])
+                        sns.heatmap(confusion_matrix, annot=True, fmt='d', cmap=cmap, cbar=False,
+                                    xticklabels=['Out of stock', 'In stock'],
+                                    yticklabels=['Out of stock', 'In stock'],
+                                    ax=ax, annot_kws={"size": 8})
+                        ax.set_xlabel("Predicted", fontsize=8, fontweight='bold')
+                        ax.set_ylabel("Actual", fontsize=8, fontweight='bold')
+                        ax.set_title(f"{hour}", fontsize=9, fontweight='bold')
+                    
+                    plt.tight_layout()
+                    st.pyplot(fig, use_container_width=True)
+                
                 elif tab_index == 3:
                     st.markdown(f"### {model_name}")
-                    st.write("Summary SHAP plot showing feature impact on predictions.")
+                    # SHAP Summary Plot
+                    fig, ax = plt.subplots(figsize=(10, 8))
+                    
+                    # SHAP summary data
+                    shap_data = {
+                        "Feature": ["oos_rate_lag1_day", "second_category_id", "discount", "product_id", "third_category_id",
+                                   "management_group_id", "first_category_id", "avg_temperature", "activity_flag", "precpt",
+                                   "store_id", "holiday_flag", "avg_humidity", "avg_wind_level", "is_weekend"],
+                        "SHAP_values": [
+                            [-3, -2, -1, 0, 1, 2, 3],
+                            [-3, -2, -1, 0, 1, 2, 3],
+                            [-3, -2, -1, 0, 1, 2, 3],
+                            [-3, -2, -1, 0, 1, 2, 3],
+                            [-3, -2, -1, 0, 1, 2, 3],
+                            [-3, -2, -1, 0, 1, 2, 3],
+                            [-3, -2, -1, 0, 1, 2, 3],
+                            [-3, -2, -1, 0, 1, 2, 3],
+                            [-3, -2, -1, 0, 1, 2, 3],
+                            [-3, -2, -1, 0, 1, 2, 3],
+                            [-3, -2, -1, 0, 1, 2, 3],
+                            [-3, -2, -1, 0, 1, 2, 3],
+                            [-3, -2, -1, 0, 1, 2, 3],
+                            [-3, -2, -1, 0, 1, 2, 3],
+                            [-3, -2, -1, 0, 1, 2, 3]
+                        ]
+                    }
+                    
+                    # SHAP plot removed
+                    st.write("SHAP plot removed")
