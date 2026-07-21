@@ -485,7 +485,7 @@ def render_bivariate(df_filtered):
       fontweight="bold",
       pad=20,
   )
-  ax4.set_xlabel("Temperature Zones")
+  ax4.set_xlabel("Temperature Zones", labelpad=20)
   ax4.set_ylabel("Mean OOS Hours")
   ax4.set_ylim(0, 6)
   ax4.spines["top"].set_visible(False)
