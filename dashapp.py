@@ -6,6 +6,7 @@ import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
 import ast
+from matplotlib.gridspec import GridSpec
 
 # -----------------------------------------------------------------------------
 # 1. PAGE CONFIGURATION & LOAD DATA
@@ -338,112 +339,71 @@ def render_bivariate(df_filtered):
 
     df_bivar_oos = df_filtered.copy()
     df_bivar_oos['dt'] = pd.to_datetime(df_bivar_oos['dt'])
-    df_bivar_oos['day_of_week'] = df_bivar_oos['dt'].dt.day_name()
-    day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    df_bivar_oos['day_of_week'] = pd.Categorical(df_bivar_oos['day_of_week'], categories=day_order, ordered=True)
     df_bivar_oos['hours_stock_status'] = df_bivar_oos['hours_stock_status'].apply(safe_eval)
-
-    df_bivar_oos['stock_hour6_21_cnt'] = df_bivar_oos['hours_stock_status'].apply(lambda x: sum(1 for status in x[6:22] if status == 0))
-    total_hours_in_window_new = 16
-    df_bivar_oos['oos_hours_per_record'] = total_hours_in_window_new - df_bivar_oos['stock_hour6_21_cnt']
+    df_bivar_oos['stock_hour6_22_cnt'] = df_bivar_oos['hours_stock_status'].apply(lambda x: sum(1 for status in x[6:22] if status == 0))
+    total_hours_window = 16
+    df_bivar_oos['oos_hours_per_record'] = total_hours_window - df_bivar_oos['stock_hour6_22_cnt']
     hours_df = pd.DataFrame(df_bivar_oos['hours_stock_status'].tolist(), columns=[f'{i}h' for i in range(24)])
 
     sns.set_theme(style="whitegrid")
-    fig_bivar_oos_plots, axes_oos = plt.subplots(2, 2, figsize=(20, 15))
-    fig_bivar_oos_plots.suptitle('Bivariate Analysis: Factors Influencing Out-of-Stock Hours (6h - 21h59 window)', fontsize=16, fontweight='bold', y=1.02)
+    fig = plt.figure(figsize=(20, 16), constrained_layout=True)
+    gs = GridSpec(2, 2, figure=fig)
 
+    ax1 = fig.add_subplot(gs[0, 0])
     hourly_oos_rate = hours_df[[f'{i}h' for i in range(6, 22)]].mean()
-    sns.lineplot(x=hourly_oos_rate.index, y=hourly_oos_rate.values, marker='o', color='red', linewidth=2.5, ax=axes_oos[0, 0])
-    axes_oos[0, 0].set_title('Average Out-of-Stock Rate by Hour (6h - 21h59)', fontsize=14, fontweight='bold')
-    axes_oos[0, 0].set_xlabel('Hour of the Day (6h - 21h59)', fontsize=11)
-    axes_oos[0, 0].set_ylabel('Out-of-Stock Rate (0 - 1)')
-    axes_oos[0, 0].tick_params(axis='x', rotation=45)
+    sns.lineplot(x=hourly_oos_rate.index, y=hourly_oos_rate.values, marker='o', color='red', linewidth=2.5, ax=ax1)
+    ax1.fill_between(hourly_oos_rate.index, hourly_oos_rate.values, color='red', alpha=0.1)
+    ax1.set_title('Hourly Out-of-Stock Trend (6h-21h)', fontsize=14, fontweight='bold', pad=20)
+    ax1.set_xlabel('Time Window')
+    ax1.set_ylabel('Mean OOS Rate')
+    ax1.spines['top'].set_visible(False)
+    ax1.spines['right'].set_visible(False)
 
-    def get_event_category(row):
-        if row['activity_flag'] == 1 and row['holiday_flag'] == 1:
-            return 'Activity & Holiday'
-        elif row['activity_flag'] == 1 and row['holiday_flag'] == 0:
-            return 'Activity Only'
-        elif row['activity_flag'] == 0 and row['holiday_flag'] == 1:
-            return 'Holiday Only'
-        else:
-            return 'No Activity/Holiday'
+    ax2 = fig.add_subplot(gs[0, 1])
+    correlation_matrix = df_bivar_oos.pivot_table(index='holiday_flag', columns='activity_flag', values='oos_hours_per_record', aggfunc='mean')
+    sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap="YlOrBr", cbar_kws={'label': 'Mean OOS Hours', 'shrink': 0.8}, ax=ax2)
+    ax2.set_title('Strategic Impact of Promotions & Holidays on OOS', fontsize=14, fontweight='bold', pad=20)
+    ax2.set_xticklabels(['No Promotion', 'With Promotion'], rotation=0)
+    ax2.set_yticklabels(['Regular Day', 'Holiday'], rotation=0)
+    ax2.set_xlabel('Promotion Status')
+    ax2.set_ylabel('Holiday Status')
+    for spine in ax2.spines.values():
+        spine.set_visible(False)
 
-    df_bivar_oos['event_category'] = df_bivar_oos.apply(get_event_category, axis=1)
-    event_category_order = ['No Activity/Holiday', 'Activity Only', 'Holiday Only', 'Activity & Holiday']
-    avg_oos_by_event = df_bivar_oos.groupby('event_category', observed=False)['oos_hours_per_record'].mean().reindex(event_category_order)
+    ax3 = fig.add_subplot(gs[1, 0])
+    bins_5 = np.arange(0, 1.05, 0.05)
+    labels_5 = [f'{int(i*100)}-{int((i+0.05)*100)}%' for i in bins_5[:-1]]
+    df_bivar_oos['discount_grp_5'] = pd.cut(df_bivar_oos['discount'], bins=bins_5, labels=labels_5)
+    mean_oos_by_discount = df_bivar_oos[df_bivar_oos['discount'] <= 1.0].groupby('discount_grp_5', observed=False)['oos_hours_per_record'].mean().reset_index()
+    sns.lineplot(x='discount_grp_5', y='oos_hours_per_record', data=mean_oos_by_discount, marker='s', markersize=6, color='teal', linewidth=2, ax=ax3)
+    ax3.fill_between(range(len(mean_oos_by_discount)), mean_oos_by_discount['oos_hours_per_record'], color='teal', alpha=0.1)
+    ax3.set_title('Price Elasticity & Stock Availability Correlation', fontsize=14, fontweight='bold', pad=20)
+    ax3.tick_params(axis='x', rotation=90)
+    ax3.set_xlabel('Discount Depth')
+    ax3.set_ylabel('Mean OOS Hours')
+    ax3.set_ylim(0, 16)
+    ax3.spines['top'].set_visible(False)
+    ax3.spines['right'].set_visible(False)
 
-    sns.barplot(
-        x=avg_oos_by_event.index,
-        y=avg_oos_by_event.values,
-        palette='tab10',
-        hue=avg_oos_by_event.index,
-        legend=False,
-        edgecolor='black',
-        ax=axes_oos[0, 1]
-    )
-
-    for i, val in enumerate(avg_oos_by_event.values):
-        axes_oos[0, 1].text(i, val + (max(avg_oos_by_event.values)*0.01), f'{val:.2f}h',
-                            ha='center', va='bottom', fontsize=10, fontweight='bold')
-
-    axes_oos[0, 1].set_title('Average OOS Hours by Event Category (6h - 21h59)', fontsize=13, fontweight='bold', pad=15)
-    axes_oos[0, 1].set_xlabel('Event Category', fontsize=11)
-    axes_oos[0, 1].set_ylabel('Average Out-of-Stock Hours (6h - 21h59)', fontsize=11)
-    axes_oos[0, 1].tick_params(axis='x', rotation=15)
-
-    product_instock_hours = df_bivar_oos.groupby('product_id')['stock_hour6_21_cnt'].mean().reset_index()
-    product_oos = product_instock_hours.copy()
-    product_oos['avg_oos_hours'] = total_hours_in_window_new - product_oos['stock_hour6_21_cnt']
-    top_5_oos_products = product_oos.sort_values(by='avg_oos_hours', ascending=False).head(5)
-    top_5_oos_products['product_id'] = top_5_oos_products['product_id'].astype(str)
-
-    sns.barplot(
-        x='avg_oos_hours',
-        y='product_id',
-        data=top_5_oos_products,
-        palette='Set2',
-        hue='product_id',
-        legend=False,
-        edgecolor='black',
-        orient='h',
-        ax=axes_oos[1, 0]
-    )
-
-    for i, v in enumerate(top_5_oos_products['avg_oos_hours']):
-        axes_oos[1, 0].text(v + 0.1, i, f'{v:.2f}', va='center', fontsize=10, fontweight='bold')
-
-    axes_oos[1, 0].set_title('Top 5 Products by Average OOS Hours (6h - 21h59)', fontsize=13, fontweight='bold', pad=15)
-    axes_oos[1, 0].set_xlabel('Average Out-of-Stock Hours (6h - 21h59)', fontsize=11)
-    axes_oos[1, 0].set_ylabel('Product ID', fontsize=11)
-
-    temperature_bins = [0, 14, 18, 22, 26, 30, np.inf]
-    temperature_labels = ['<14°C', '14-18°C', '18-22°C', '22-26°C', '26-30°C', '>30°C']
-    df_bivar_oos['temperature_range'] = pd.cut(df_bivar_oos['avg_temperature'], bins=temperature_bins, labels=temperature_labels, right=False)
-    avg_oos_by_temp = df_bivar_oos.groupby('temperature_range', observed=False)['oos_hours_per_record'].mean().reset_index()
-
-    sns.barplot(
-        x='temperature_range',
-        y='oos_hours_per_record',
-        data=avg_oos_by_temp,
-        palette='viridis',
-        hue='temperature_range',
-        legend=False,
-        edgecolor='black',
-        ax=axes_oos[1, 1]
-    )
-
-    for i, val in enumerate(avg_oos_by_temp['oos_hours_per_record']):
-        if pd.notna(val):
-            axes_oos[1, 1].text(i, val + (avg_oos_by_temp['oos_hours_per_record'].max()*0.01), f'{val:.2f}h',
-                                ha='center', va='bottom', fontsize=10, fontweight='bold')
-
-    axes_oos[1, 1].set_title('Average OOS Hours by Temperature Range (6h - 21h59)', fontsize=13, fontweight='bold')
-    axes_oos[1, 1].set_xlabel('Temperature Range', fontsize=11)
-    axes_oos[1, 1].set_ylabel('Average Out-of-Stock Hours (6h - 21h59)', fontsize=11)
+    ax4 = fig.add_subplot(gs[1, 1])
+    temp_bins_impact = [0, 22, 28, 100]
+    temp_labels_impact = ['Cool (<22°C)', 'Moderate (22-28°C)', 'Hot (>28°C)']
+    df_bivar_oos['temp_impact'] = pd.cut(df_bivar_oos['avg_temperature'], bins=temp_bins_impact, labels=temp_labels_impact)
+    temp_stats = df_bivar_oos.groupby('temp_impact', observed=False)['oos_hours_per_record'].mean().reset_index()
+    overall_mean = df_bivar_oos['oos_hours_per_record'].mean()
+    custom_colors = {'Cool (<22°C)': 'skyblue', 'Moderate (22-28°C)': 'orange', 'Hot (>28°C)': 'crimson'}
+    sns.barplot(x='temp_impact', y='oos_hours_per_record', data=temp_stats, palette=custom_colors, hue='temp_impact', legend=False, ax=ax4)
+    ax4.axhline(overall_mean, color='black', linestyle='--', alpha=0.6, label=f'System Avg: {overall_mean:.2f}h')
+    ax4.legend()
+    ax4.set_title('Environmental Impact on Inventory Stability', fontsize=14, fontweight='bold', pad=20)
+    ax4.set_xlabel('Temperature Zones')
+    ax4.set_ylabel('Mean OOS Hours')
+    ax4.set_ylim(0, 6)
+    ax4.spines['top'].set_visible(False)
+    ax4.spines['right'].set_visible(False)
 
     plt.tight_layout()
-    st.pyplot(fig_bivar_oos_plots)
+    st.pyplot(fig)
 
 
 def render_multivariate(df_filtered):
