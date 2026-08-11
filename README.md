@@ -1,4 +1,3 @@
----Fresh Food Stockout Forecasting---
 
 This project focuses on predicting stockouts for fresh food items, helping to optimize inventory management and reduce waste.
 
